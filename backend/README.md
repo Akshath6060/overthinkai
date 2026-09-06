@@ -44,6 +44,13 @@ For Vercel → Render, set `COOKIE_SECURE=true` and `COOKIE_SAMESITE=none`. The 
 3. Copy the `mongodb+srv://...` driver URI into Render as `MONGODB_URI`; do not commit it.
 4. Set `MONGODB_DATABASE=overthinker`.
 
+The URI credentials must belong to an Atlas **Database User** from **Security →
+Database Access**. Atlas account passwords, project API keys, and application
+API keys cannot authenticate a MongoDB driver. Replace the URI's password
+placeholder and percent-encode reserved characters in usernames/passwords (or
+copy a freshly generated driver URI from Atlas after resetting the database
+user password). Store the URI in Render without surrounding quotes.
+
 Do not work around Atlas connection failures with
 `tlsAllowInvalidCertificates=true`. An SRV Atlas URI enables TLS already, and
 disabling certificate verification weakens production security.

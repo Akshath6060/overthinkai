@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta
 from uuid import uuid4
 from fastapi.testclient import TestClient
 
@@ -7,7 +8,7 @@ from app.core.config import Settings
 from app.db.store import MemoryStore
 from app.main import create_app
 from app.services.agent_service import seed_system_agents
-from app.services.auth_service import create_guest
+from app.services.auth_service import create_guest, create_session, resolve_session
 from app.services.run_service import create_decision as service_create
 from app.schemas.decision import DecisionCreate
 from conftest import create_decision, wait_complete
@@ -36,6 +37,14 @@ def configured(provider):
 
 def minimal(question="Should I proceed?"):
     return {"question":question,"category":"Life","severity":"NORMAL","humorLevel":"Dry","providerMode":"council","agentIds":["agent_practical","agent_judge"],"autoSave":True}
+
+
+async def test_session_resolution_accepts_existing_naive_utc_expiry():
+    store=MemoryStore(); settings=Settings(app_env="test",mongodb_uri="memory://",ai_provider="mock",session_secret="test-session-secret-that-is-long-enough")
+    user=await create_guest(store,settings); token=await create_session(store,user["id"],settings)
+    store.data["sessions"][0]["expiresAt"]=datetime.now()+timedelta(days=1)
+    resolved=await resolve_session(store,token,settings)
+    assert resolved and resolved["id"]==user["id"]
 
 
 def test_provider_failure_refunds_and_redacts():

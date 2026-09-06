@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 from app.core.ids import new_id
 from app.core.security import hash_token, issue_session_token
@@ -29,7 +29,14 @@ async def create_session(store, user_id: str, settings):
 async def resolve_session(store, token: str | None, settings):
     if not token: return None
     session = await store.find_one("sessions", {"tokenHash":hash_token(token, settings.session_secret),"revokedAt":None})
-    if not session or session["expiresAt"] <= utcnow(): return None
+    if not session: return None
+    expires_at = session.get("expiresAt")
+    if not expires_at: return None
+    # Existing BSON values can be decoded as naive UTC by clients created
+    # before tz_aware was enabled. Treat those values as UTC during migration.
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at <= utcnow(): return None
     return await store.find_one("users", {"_id":session["userId"]})
 
 

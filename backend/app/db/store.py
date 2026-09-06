@@ -9,7 +9,9 @@ from pymongo import AsyncMongoClient, ReturnDocument
 
 class MongoStore:
     def __init__(self, uri: str, database: str):
-        self.client = AsyncMongoClient(uri, serverSelectionTimeoutMS=5000)
+        # Keep BSON datetimes timezone-aware so comparisons with the API's UTC
+        # timestamps cannot fail only in production-backed session flows.
+        self.client = AsyncMongoClient(uri, serverSelectionTimeoutMS=5000, tz_aware=True)
         self.db = self.client[database]
 
     async def ping(self):
@@ -154,4 +156,3 @@ class MemoryStore:
 
     async def count(self, collection: str, query: dict):
         return len(await self.find_many(collection, query))
-
