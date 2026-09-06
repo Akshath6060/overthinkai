@@ -33,8 +33,8 @@ function normalizePath(path) {
   return path.length > 1 ? path.replace(/\/+$/, '') : path;
 }
 
-function LoadingScreen() {
-  return <div className="app-loading" role="status" aria-live="polite"><span aria-hidden="true">🌀</span><strong>Consulting the council…</strong></div>;
+function LoadingScreen({ message = 'Consulting the council…' }) {
+  return <div className="app-loading" role="status" aria-live="polite"><span aria-hidden="true">🌀</span><strong>{message}</strong></div>;
 }
 
 export default function App(props) {
@@ -60,7 +60,7 @@ export default function App(props) {
 
   if (!routePage) return <ErrorPage status={404} onHome={() => navigate('new')} showBack />;
 
-  if (!v.authReady) return <LoadingScreen />;
+  if (!v.authReady) return <LoadingScreen message="Waking up the council… This can take up to one minute." />;
 
   if (v.serviceUnavailable) return <ErrorPage status={503} onRetry={v.restoreSession} onHome={() => navigate('new')} />;
 

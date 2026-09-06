@@ -127,7 +127,10 @@ export function useOverthinker(props = {}) {
     setAuthReady(false);
     setServiceUnavailable(false);
     try {
-      const payload = await api('/me');
+      // Render free services can take about a minute to wake after being idle.
+      // Warm the backend before restoring auth so a cold start is not shown as 503.
+      await api('/health', { timeout: 90000, retries: 8 });
+      const payload = await api('/me', { timeout: 30000, retries: 2 });
       applyAccount(payload);
       setAuthed(true);
     } catch (error) {

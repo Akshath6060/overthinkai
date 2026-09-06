@@ -6,7 +6,7 @@ const copy = {
   403: ['PERMISSION DENIED', 'Even our council agrees: this particular door is not yours.'],
   404: ['PAGE NOT FOUND', "We overthought this URL and still couldn't find it."],
   500: ['SOMETHING WENT WRONG', 'The council has entered an unexpected internal debate.'],
-  503: ['ENGINE ON A THINKING BREAK', 'Our overthinking engine is temporarily unavailable. Your decisions are still safe.'],
+  503: ['ENGINE IS WAKING UP', 'The server may be waking after being idle. This normally takes 30–60 seconds; please try again.'],
 };
 
 export default function ErrorPage({ status = 500, onRetry, onHome, showBack = false }) {
