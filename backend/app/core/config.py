@@ -16,9 +16,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     openai_judge_model: str = "gpt-4.1-mini"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.5-flash-lite"
-    gemini_judge_model: str = "gemini-3.5-flash"
-    gemini_fallback_model: str = "gemini-3.1-flash-lite"
+    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_judge_model: str = "gemini-3.7-flash"
+    gemini_fallback_model: str = ""
+    gemini_fallback_models: str = "gemini-2.5-flash-lite,gemini-2.5-flash,gemini-3.7-flash,gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash"
     gemini_max_concurrency: int = Field(default=1, ge=1, le=10)
     session_secret: str = "development-only-change-me-please-32-chars"
     session_expire_days: int = Field(default=30, ge=1, le=365)
@@ -31,6 +32,11 @@ class Settings(BaseSettings):
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     docs_enabled: bool = True
     rate_limit_enabled: bool = True
+
+    @property
+    def gemini_model_pool(self) -> str:
+        values = [*self.gemini_fallback_model.split(","), *self.gemini_fallback_models.split(",")]
+        return ",".join(dict.fromkeys(value.strip() for value in values if value.strip()))
 
     @property
     def cors_origins(self) -> list[str]:

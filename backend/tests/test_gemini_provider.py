@@ -38,7 +38,7 @@ async def test_gemini_provider_falls_back_after_retryable_capacity_errors(monkey
     provider=GeminiProvider("test-key","gemini-primary","gemini-primary",client,fallback_model="gemini-fallback")
     output,_=await provider.analyze("Should I retry?",{"name":"Risk Analyst","personality":"Cautious","instructions":"Assess risks."},"NORMAL","Dry")
     assert output.analysis=="Fallback answer."
-    assert len([url for url in calls if "gemini-primary" in url])==5
+    assert len([url for url in calls if "gemini-primary" in url])==2
     assert "gemini-fallback" in calls[-1]
     await client.aclose()
 
@@ -88,3 +88,24 @@ async def test_gemini_provider_reads_google_retry_info():
         "error":{"details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"20.75s"}]}
     })
     assert GeminiProvider._retry_delay(response,0)==20.75
+
+
+async def test_gemini_provider_rotates_across_multiple_quota_limited_models(monkeypatch):
+    calls=[]
+    async def no_sleep(_): return None
+    monkeypatch.setattr("app.ai.gemini_provider.asyncio.sleep",no_sleep)
+    def handler(request: httpx.Request):
+        model=str(request.url).split("/models/",1)[1].split(":",1)[0]
+        calls.append(model)
+        if model != "gemini-third":
+            return httpx.Response(429,json={"error":{"status":"RESOURCE_EXHAUSTED"}})
+        return httpx.Response(200,json={
+            "candidates":[{"content":{"parts":[{"text":json.dumps({"analysis":"Third model answered.","verdict":"PROCEED","confidence":80})}]}}],
+            "usageMetadata":{},
+        })
+    client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider=GeminiProvider("test-key","gemini-primary","gemini-primary",client,fallback_model="gemini-second,gemini-third")
+    output,_=await provider.analyze("Should I rotate?",{"name":"Risk Analyst","personality":"Cautious","instructions":"Assess risks."},"NORMAL","Dry")
+    assert output.analysis=="Third model answered."
+    assert calls==["gemini-primary","gemini-second","gemini-third"]
+    await client.aclose()

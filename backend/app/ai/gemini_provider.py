@@ -14,7 +14,7 @@ from .provider import AIProvider
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
-_MAX_ATTEMPTS_PER_MODEL = 5
+_MAX_ATTEMPTS_PER_MODEL = 2
 _RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
 
 # Gemini's responseSchema is an OpenAPI 3.0 subset and rejects these JSON Schema keywords outright.
@@ -44,7 +44,7 @@ class GeminiProvider(AIProvider):
         self.api_key = api_key
         self.model = model
         self.judge_model = judge_model
-        self.fallback_model = fallback_model.strip()
+        self.fallback_models = [item.strip() for item in fallback_model.split(",") if item.strip()]
         self.client = client or httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0))
         self._request_slots = asyncio.Semaphore(max_concurrency)
 
@@ -85,9 +85,7 @@ class GeminiProvider(AIProvider):
                 "responseSchema": _response_schema(schema),
             },
         }
-        models = [model]
-        if self.fallback_model and self.fallback_model != model:
-            models.append(self.fallback_model)
+        models = list(dict.fromkeys([model, *self.fallback_models]))
         last_status = None
         for model_index, selected_model in enumerate(models):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{selected_model}:generateContent"
@@ -97,13 +95,18 @@ class GeminiProvider(AIProvider):
                     response = await self.client.post(url, headers={"x-goog-api-key": self.api_key}, json=body)
                     last_status = response.status_code
                     if response.status_code in _RETRYABLE_STATUSES:
+                        # Quotas are model-specific. Rotate immediately instead of
+                        # spending more of the same exhausted model's allowance.
+                        if response.status_code == 429 and model_index + 1 < len(models):
+                            break
                         if attempt + 1 < _MAX_ATTEMPTS_PER_MODEL:
                             await asyncio.sleep(self._retry_delay(response, attempt))
                             continue
                         break
-                    # A missing/retired model should fail over immediately; retrying the
-                    # same invalid endpoint only makes the user wait longer.
-                    if response.status_code == 404:
+                    # Some model generations differ in supported request options.
+                    # Rotate on a model-specific bad request or missing model, while
+                    # preserving auth/permission failures as terminal errors.
+                    if response.status_code in {400, 404} and model_index + 1 < len(models):
                         break
                     response.raise_for_status()
                     raw = response.json()
@@ -137,7 +140,7 @@ class GeminiProvider(AIProvider):
                     )
                     break
             if model_index + 1 < len(models):
-                log_event("ai.provider_fallback", provider="gemini", primaryModel=model, fallbackModel=models[model_index + 1], providerStatus=last_status)
+                log_event("ai.provider_fallback", provider="gemini", failedModel=selected_model, fallbackModel=models[model_index + 1], providerStatus=last_status)
         raise AppError(503, "AI_PROVIDER_UNAVAILABLE", "The Gemini council is temporarily unavailable.", {"providerStatus": last_status})
 
     async def analyze(self, question, agent, severity, humor_level):
