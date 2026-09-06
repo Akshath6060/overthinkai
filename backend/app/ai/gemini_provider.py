@@ -66,7 +66,6 @@ class GeminiProvider(AIProvider):
             "generationConfig": {
                 "responseMimeType": "application/json",
                 "responseSchema": _response_schema(schema),
-                "temperature": 0.8,
             },
         }
         models = [model]

@@ -9,6 +9,7 @@ async def test_gemini_provider_parses_structured_output_without_exposing_key():
         assert request.headers.get("x-goog-api-key") == "test-key"
         payload=json.loads(request.content)
         assert payload["generationConfig"]["responseMimeType"]=="application/json"
+        assert "temperature" not in payload["generationConfig"]
         return httpx.Response(200,json={
             "candidates":[{"content":{"parts":[{"text":json.dumps({"analysis":"A question-specific visible answer.","verdict":"PROCEED","confidence":82})}]}}],
             "usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":8},

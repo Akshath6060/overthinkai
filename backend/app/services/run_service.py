@@ -123,6 +123,7 @@ async def execute_run(store, provider, run_id: str):
                 errorType=type(exc).__name__,
                 errorCode=getattr(exc, "code", "UNEXPECTED_PROVIDER_ERROR"),
                 status=getattr(exc, "status", None),
+                providerStatus=getattr(exc, "details", {}).get("providerStatus") if isinstance(getattr(exc, "details", None), dict) else None,
             )
             await store.update_one("run_agents", {"_id":agent["_id"]}, {"$set":{"status":"failed"}})
             await store.update_one("analysis_runs", {"_id":run_id}, {"$set":{"partialFailure":True}})
@@ -151,6 +152,7 @@ async def execute_run(store, provider, run_id: str):
             errorType=type(exc).__name__,
             errorCode=getattr(exc, "code", "UNEXPECTED_PROVIDER_ERROR"),
             status=getattr(exc, "status", None),
+            providerStatus=getattr(exc, "details", {}).get("providerStatus") if isinstance(getattr(exc, "details", None), dict) else None,
         )
         await store.update_one("run_agents", {"_id":judge["_id"]}, {"$set":{"status":"failed"}})
         await _fail(store, claimed, "The final judge failed to reach a verdict.")
