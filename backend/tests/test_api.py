@@ -15,6 +15,7 @@ def test_health_and_auth(client):
     assert client.post("/api/v1/auth/guest").json()["user"]["id"]==login.json()["user"]["id"]
     assert client.post("/api/v1/auth/logout").status_code==204
     assert client.get("/api/v1/me").status_code==401
+    assert client.post("/api/v1/auth/logout").status_code==204
 
 
 def test_settings_persist_and_validate(authed):

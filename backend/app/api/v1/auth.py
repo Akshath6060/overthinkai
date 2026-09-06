@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Response
-from app.api.deps import current_user
+from fastapi import APIRouter, Request, Response
 from app.services.auth_service import create_guest, create_session, me_payload, resolve_session, revoke_session
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -18,7 +17,8 @@ async def guest(request: Request, response: Response):
 
 
 @router.post("/logout", status_code=204, summary="Revoke the current session")
-async def logout(request: Request, response: Response, user=Depends(current_user)):
+async def logout(request: Request, response: Response):
+    # Logout must remain safe and repeatable even when a session has already
+    # expired or the browser is clearing invalid authentication state.
     await revoke_session(request.app.state.store, request.cookies.get("ot_session"), request.app.state.settings)
     response.delete_cookie("ot_session", path="/", secure=request.app.state.settings.cookie_secure, samesite=request.app.state.settings.cookie_samesite)
-

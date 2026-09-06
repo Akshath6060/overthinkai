@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     openai_judge_model: str = "gpt-4.1-mini"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.6-flash"
-    gemini_judge_model: str = "gemini-3.6-flash"
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_judge_model: str = "gemini-2.5-flash"
     session_secret: str = "development-only-change-me-please-32-chars"
     session_expire_days: int = Field(default=30, ge=1, le=365)
     frontend_url: str = "http://localhost:5173"

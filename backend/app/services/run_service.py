@@ -5,6 +5,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core.errors import AppError
 from app.core.ids import new_id
+from app.core.logging import log_event
 from app.schemas.common import utcnow
 from .agent_service import resolve_agents
 from .credit_service import reserve, refund
@@ -113,7 +114,16 @@ async def execute_run(store, provider, run_id: str):
             data={"agentId":aid,"position":agent["position"],**visible,"durationMs":duration,"usage":usage}
             await emit(store, run_id, "agent.completed", data)
             return data
-        except Exception:
+        except Exception as exc:
+            log_event(
+                "analysis.agent_failed",
+                runId=run_id,
+                agentId=aid,
+                provider=type(provider).__name__,
+                errorType=type(exc).__name__,
+                errorCode=getattr(exc, "code", "UNEXPECTED_PROVIDER_ERROR"),
+                status=getattr(exc, "status", None),
+            )
             await store.update_one("run_agents", {"_id":agent["_id"]}, {"$set":{"status":"failed"}})
             await store.update_one("analysis_runs", {"_id":run_id}, {"$set":{"partialFailure":True}})
             await emit(store, run_id, "agent.failed", {"agentId":aid,"position":agent["position"],"message":"This expert dropped their notes in a metaphorical puddle."})
@@ -132,7 +142,16 @@ async def execute_run(store, provider, run_id: str):
     judge_mark = time.monotonic()
     try:
         verdict, judge_usage = await provider.judge(decision["question"], {"id":judge["originalAgentId"],**judge}, results, decision["severity"], decision["humorLevel"])
-    except Exception:
+    except Exception as exc:
+        log_event(
+            "analysis.judge_failed",
+            runId=run_id,
+            agentId=judge["originalAgentId"],
+            provider=type(provider).__name__,
+            errorType=type(exc).__name__,
+            errorCode=getattr(exc, "code", "UNEXPECTED_PROVIDER_ERROR"),
+            status=getattr(exc, "status", None),
+        )
         await store.update_one("run_agents", {"_id":judge["_id"]}, {"$set":{"status":"failed"}})
         await _fail(store, claimed, "The final judge failed to reach a verdict.")
         return
