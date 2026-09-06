@@ -35,9 +35,18 @@ For Vercel → Render, set `COOKIE_SECURE=true` and `COOKIE_SAMESITE=none`. The 
 ## MongoDB Atlas
 
 1. Create an Atlas M0 cluster and a least-privilege database user.
-2. Add Render's required network access (Atlas does not support a stable Render egress IP on every plan; use the narrowest option your deployment permits).
+2. In Atlas **Security → Network Access**, allow the outbound IP ranges shown
+   for the Render service. Atlas does not support a stable Render egress IP on
+   every plan, so use the narrowest option the deployment permits. A TLS
+   handshake failure against every replica-set member usually means this access
+   rule is missing or the cluster is paused. `0.0.0.0/0` can be used briefly to
+   confirm the diagnosis, but restrict it again where the hosting plan permits.
 3. Copy the `mongodb+srv://...` driver URI into Render as `MONGODB_URI`; do not commit it.
 4. Set `MONGODB_DATABASE=overthinker`.
+
+Do not work around Atlas connection failures with
+`tlsAllowInvalidCertificates=true`. An SRV Atlas URI enables TLS already, and
+disabling certificate verification weakens production security.
 
 Startup pings MongoDB and fails clearly if it cannot connect. Credentials are not logged. Indexes are created automatically, including TTL session expiry, unique idempotency, event sequence, snapshot position, preferences, and credit-accounting constraints.
 
