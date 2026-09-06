@@ -110,8 +110,23 @@ User still doesn't know what to do
 
 ## Project Demo
 
-- 🌐 **Live website:** [overthink1ai.vercel.app](https://overthink1ai.vercel.app/)
-- 💻 **GitHub repository:** [Akshath6060/overthink.ai](https://github.com/Akshath6060/overthink.ai)
+### Frontend
+
+- **Hosting:** Vercel
+- **Live website:** [overthink1ai.vercel.app](https://overthink1ai.vercel.app/)
+- **Source repository:** [Akshath6060/overthink1.ai](https://github.com/Akshath6060/overthink1.ai.git)
+
+### Backend
+
+- **Hosting:** Render
+- **API:** [overthink-ai-ue51.onrender.com](https://overthink-ai-ue51.onrender.com/health)
+- **Source repository:** [Akshath6060/overthink.ai](https://github.com/Akshath6060/overthink.ai.git)
+
+### Contact
+
+- **Name:** Akshath OK
+- **Email:** [okakshath123@gmail.com](mailto:okakshath123@gmail.com)
+- **Phone:** [7034876060](tel:+917034876060)
 
 ## Local development
 
