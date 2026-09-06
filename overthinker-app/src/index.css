@@ -1,0 +1,20 @@
+html,body{margin:0;padding:0;background:#FFF8E7;color:#1A1720;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#8B5CF6;text-decoration:none;font-weight:600}
+a:hover{color:#FF4FA3}
+::selection{background:#FFD84D}
+textarea,input,button{font:inherit}
+textarea::placeholder,input::placeholder{color:#A79FB2}
+@keyframes ot-pop{0%{opacity:0;transform:scale(.94) translateY(10px)}60%{transform:scale(1.015) translateY(0)}100%{opacity:1;transform:none}}
+@keyframes ot-slam{0%{opacity:0;transform:scale(1.14) rotate(-1.5deg)}55%{opacity:1;transform:scale(.985) rotate(.4deg)}100%{opacity:1;transform:none}}
+@keyframes ot-wiggle{0%{transform:rotate(0)}25%{transform:rotate(-7deg)}50%{transform:rotate(6deg)}75%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+@keyframes ot-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-3px)}40%{transform:translateX(3px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
+@keyframes ot-blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes ot-sheen{0%{background-position:-180% 0}100%{background-position:180% 0}}
+@keyframes ot-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media (max-width:960px){
+[data-sidebar]{display:none!important}
+[data-mobilenav]{display:flex!important}
+[data-shell]{flex-direction:column!important}
+[data-rightpanel]{display:none!important}
+}

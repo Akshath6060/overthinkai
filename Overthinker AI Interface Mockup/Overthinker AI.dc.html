@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#09090B;color:#FAFAFA;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#A79BF6;text-decoration:none}
+a:hover{color:#C3BBFA}
+::selection{background:rgba(124,109,242,.35)}
+textarea,input,button{font:inherit}
+textarea::placeholder,input::placeholder{color:#52525B}
+@keyframes ot-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.82)}}
+@keyframes ot-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes ot-sheen{0%{background-position:-180% 0}100%{background-position:180% 0}}
+@keyframes ot-spin{to{transform:rotate(360deg)}}
+@media (max-width:940px){
+[data-sidebar]{display:none!important}
+[data-mobilenav]{display:flex!important}
+[data-shell]{flex-direction:column!important}
+[data-rightpanel]{display:none!important}
+}
+</style>
+</helmet>
+<div data-shell="1" style="display:flex;min-height:100vh;background:#09090B;font-family:Manrope,ui-sans-serif,system-ui,sans-serif;color:#FAFAFA">
+
+  <aside data-sidebar="1" style="width:252px;flex:none;background:#111113;border-right:1px solid #27272A;display:flex;flex-direction:column;position:sticky;top:0;height:100vh">
+    <div style="padding:20px 18px 16px;border-bottom:1px solid #1F1F23">
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <circle cx="13" cy="4.6" r="2.6" fill="{{ accent }}"></circle>
+          <circle cx="5.2" cy="14" r="2.2" stroke="#52525B" stroke-width="1.3"></circle>
+          <circle cx="20.8" cy="14" r="2.2" stroke="#52525B" stroke-width="1.3"></circle>
+          <circle cx="9" cy="22.4" r="1.8" stroke="#3F3F46" stroke-width="1.3"></circle>
+          <circle cx="17.6" cy="22.4" r="1.8" stroke="#3F3F46" stroke-width="1.3"></circle>
+          <path d="M13 7.2v3.4M13 10.6H5.2v1.2M13 10.6h7.6v1.2M5.2 16.2v2.2h3.8v2M20.8 16.2v2.2h-3.2v2" stroke="#3F3F46" stroke-width="1.2" stroke-linecap="round"></path>
+        </svg>
+        <div>
+          <div style="font-size:14px;font-weight:700;letter-spacing:-.2px;line-height:1.1">Overthinker AI</div>
+          <div style="font-size:10.5px;color:#71717A;margin-top:2px;letter-spacing:.1px">Overthink less by overthinking more.</div>
+        </div>
+      </div>
+    </div>
+
+    <nav style="padding:12px 10px;display:flex;flex-direction:column;gap:2px">
+      <div style="font:600 10px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.14em;color:#52525B;padding:8px 10px 10px">WORKSPACE</div>
+      <sc-for list="{{ nav }}" as="item" hint-placeholder-count="5">
+        <button onClick="{{ item.go }}" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 10px;border-radius:7px;border:1px solid {{ item.bd }};background:{{ item.bg }};color:{{ item.fg }};font-size:13px;font-weight:{{ item.fw }};cursor:pointer;transition:background .15s,color .15s" style-hover="background:#1C1C21;color:#FAFAFA">
+          <span style="width:16px;height:16px;display:grid;place-items:center;flex:none">
+            <span style="width:7px;height:7px;border-radius:2px;background:{{ item.dot }};display:block"></span>
+          </span>
+          <span style="flex:1">{{ item.label }}</span>
+          <sc-if value="{{ item.badge }}" hint-placeholder-val="{{ false }}">
+            <span style="font:600 10px 'JetBrains Mono',monospace;color:#71717A;background:#1C1C21;border:1px solid #27272A;padding:2px 5px;border-radius:4px">{{ item.badge }}</span>
+          </sc-if>
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto;padding:14px 16px 16px;border-top:1px solid #1F1F23;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+          <span style="font-size:11px;color:#A1A1AA;font-weight:600">Overthinking Credits</span>
+          <span style="font:500 11px 'JetBrains Mono',monospace;color:#71717A">742 / 1000</span>
+        </div>
+        <div style="height:4px;border-radius:3px;background:#1C1C21;overflow:hidden">
+          <div style="width:74.2%;height:100%;background:{{ accent }};border-radius:3px"></div>
+        </div>
+        <div style="font-size:10.5px;color:#52525B;margin-top:7px">Resets in 12 days. You will use them all.</div>
+      </div>
+      <button style="display:flex;align-items:center;gap:10px;padding:7px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;text-align:left;width:100%" style-hover="background:#1C1C21;border-color:#27272A">
+        <span style="width:28px;height:28px;border-radius:50%;background:#1C1C21;border:1px solid #27272A;display:grid;place-items:center;font:600 11px 'JetBrains Mono',monospace;color:#A79BF6;flex:none">AR</span>
+        <span style="flex:1;min-width:0">
+          <span style="display:block;font-size:12px;font-weight:600;color:#FAFAFA">Aarav Rao</span>
+          <span style="display:block;font-size:10.5px;color:#71717A">Pro · Unlimited doubt</span>
+        </span>
+        <span style="color:#52525B;font-size:12px">⌄</span>
+      </button>
+    </div>
+  </aside>
+
+  <div data-mobilenav="1" style="display:none;position:sticky;top:0;z-index:20;background:#111113;border-bottom:1px solid #27272A;padding:10px 12px;gap:6px;overflow-x:auto;align-items:center">
+    <sc-for list="{{ nav }}" as="item" hint-placeholder-count="5">
+      <button onClick="{{ item.go }}" style="flex:none;padding:7px 11px;border-radius:999px;border:1px solid {{ item.bd }};background:{{ item.bg }};color:{{ item.fg }};font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">{{ item.label }}</button>
+    </sc-for>
+  </div>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header style="height:56px;flex:none;border-bottom:1px solid #1F1F23;background:rgba(9,9,11,.85);backdrop-filter:blur(8px);display:flex;align-items:center;gap:14px;padding:0 clamp(16px,3vw,32px);position:sticky;top:0;z-index:10">
+      <span style="font-size:13px;font-weight:600;color:#FAFAFA">{{ pageTitle }}</span>
+      <span style="width:1px;height:16px;background:#27272A"></span>
+      <span style="font:500 11px 'JetBrains Mono',monospace;color:#71717A">{{ pageMeta }}</span>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="display:flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid #27272A;border-radius:6px;background:#111113">
+          <span style="width:6px;height:6px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 3px rgba(34,197,94,.12)"></span>
+          <span style="font:500 10.5px 'JetBrains Mono',monospace;color:#A1A1AA">6 agents online</span>
+        </span>
+        <span style="font:500 10.5px 'JetBrains Mono',monospace;color:#52525B;border:1px solid #27272A;border-radius:6px;padding:5px 8px">v2.4.1</span>
+      </div>
+    </header>
+
+    <div style="flex:1;padding:clamp(20px,3.4vw,44px) clamp(16px,3vw,44px) 72px">
+
+      <sc-if value="{{ isInput }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:760px;margin:0 auto;padding-top:clamp(8px,4vh,48px)">
+          <div style="display:flex;justify-content:center;margin-bottom:22px">
+            <span style="display:flex;align-items:center;gap:8px;padding:5px 11px 5px 8px;border:1px solid #27272A;background:#111113;border-radius:999px">
+              <span style="width:5px;height:5px;border-radius:50%;background:{{ accent }}"></span>
+              <span style="font:500 10.5px 'JetBrains Mono',monospace;letter-spacing:.06em;color:#A1A1AA">MULTI-AGENT DECISION ORCHESTRATION</span>
+            </span>
+          </div>
+          <h1 style="margin:0;text-align:center;font-size:clamp(28px,4.4vw,42px);font-weight:800;letter-spacing:-1.2px;line-height:1.08;text-wrap:balance">What are we overthinking today?</h1>
+          <p style="margin:14px auto 30px;text-align:center;max-width:520px;font-size:14.5px;line-height:1.55;color:#A1A1AA;text-wrap:pretty">Because making a simple decision yourself would be far too efficient.</p>
+
+          <div style="background:#16161A;border:1px solid #27272A;border-radius:14px;box-shadow:0 24px 60px -30px rgba(0,0,0,.9);overflow:hidden">
+            <textarea value="{{ q }}" onChange="{{ onQ }}" rows="3" placeholder="Should I order biryani?" style="display:block;width:100%;border:0;outline:none;resize:none;background:transparent;color:#FAFAFA;font-size:17px;line-height:1.5;font-weight:500;padding:20px 20px 12px;letter-spacing:-.2px"></textarea>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 20px 16px">
+              <sc-for list="{{ cats }}" as="c" hint-placeholder-count="7">
+                <button onClick="{{ c.pick }}" style="padding:5px 11px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};font-size:12px;font-weight:500;cursor:pointer;transition:all .14s" style-hover="border-color:#3F3F46;color:#FAFAFA">{{ c.label }}</button>
+              </sc-for>
+            </div>
+            <div style="border-top:1px solid #1F1F23;background:#131317;padding:16px 20px 18px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:11px">
+                <span style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A">OVERTHINKING LEVEL</span>
+                <span style="font-size:11px;color:#52525B">{{ levelHint }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">
+                <sc-for list="{{ levels }}" as="l" hint-placeholder-count="3">
+                  <button onClick="{{ l.pick }}" style="text-align:left;padding:12px 13px;border-radius:10px;border:1px solid {{ l.bd }};background:{{ l.bg }};cursor:pointer;transition:all .16s" style-hover="border-color:#3F3F46">
+                    <span style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+                      <span style="width:12px;height:12px;border-radius:50%;border:1px solid {{ l.ring }};display:grid;place-items:center;flex:none">
+                        <span style="width:6px;height:6px;border-radius:50%;background:{{ l.inner }};display:block"></span>
+                      </span>
+                      <span style="font-size:12.5px;font-weight:700;color:{{ l.fg }};letter-spacing:-.1px">{{ l.name }}</span>
+                      <sc-if value="{{ l.warn }}" hint-placeholder-val="{{ false }}">
+                        <svg width="12" height="12" viewBox="0 0 12 12" style="flex:none"><path d="M6 1.4 11 10.4H1z" fill="none" stroke="#F59E0B" stroke-width="1.2" stroke-linejoin="round"></path><path d="M6 5v2.3" stroke="#F59E0B" stroke-width="1.2" stroke-linecap="round"></path><circle cx="6" cy="8.9" r=".65" fill="#F59E0B"></circle></svg>
+                      </sc-if>
+                    </span>
+                    <span style="display:block;font-size:11.5px;line-height:1.45;color:#71717A">{{ l.desc }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <button onClick="{{ begin }}" style="margin-top:16px;width:100%;display:flex;align-items:center;justify-content:center;gap:9px;padding:13px;border-radius:10px;border:1px solid {{ accentBorder }};background:{{ accent }};color:#fff;font-size:14px;font-weight:700;letter-spacing:-.2px;cursor:pointer;box-shadow:0 10px 24px -14px rgba(124,109,242,.9);transition:filter .15s" style-hover="filter:brightness(1.09)">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="6" r="4.2" stroke="#fff" stroke-width="1.4"></circle><path d="M8 10.2v3.4M5.6 13.6h4.8" stroke="#fff" stroke-width="1.4" stroke-linecap="round"></path></svg>
+                Begin Overthinking
+                <span style="opacity:.75">→</span>
+              </button>
+              <div style="text-align:center;font-size:11px;color:#52525B;margin-top:9px">Average unnecessary analysis time: 12 seconds</div>
+            </div>
+          </div>
+
+          <div style="margin-top:30px">
+            <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#52525B;margin-bottom:10px">OR ESCALATE SOMETHING TRIVIAL</div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px">
+              <sc-for list="{{ examples }}" as="e" hint-placeholder-count="5">
+                <button onClick="{{ e.pick }}" style="padding:8px 12px;border-radius:8px;border:1px solid #27272A;background:#111113;color:#A1A1AA;font-size:12.5px;cursor:pointer;transition:all .14s" style-hover="background:#1C1C21;color:#FAFAFA;border-color:#3F3F46">{{ e.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ inAnalysis }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:24px;align-items:flex-start;max-width:1440px;margin:0 auto">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:18px">
+
+            <div style="background:#16161A;border:1px solid #27272A;border-radius:12px;padding:18px 20px">
+              <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between">
+                <div style="min-width:0">
+                  <div style="font:600 10px 'JetBrains Mono',monospace;letter-spacing:.14em;color:#71717A;margin-bottom:8px">USER DECISION · {{ runId }}</div>
+                  <div style="font-size:clamp(19px,2.4vw,25px);font-weight:700;letter-spacing:-.6px;line-height:1.2;text-wrap:pretty">{{ question }}</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+                    <span style="font:500 10.5px 'JetBrains Mono',monospace;color:#A1A1AA;border:1px solid #27272A;background:#1C1C21;padding:4px 8px;border-radius:5px">LEVEL: {{ levelUpper }}</span>
+                    <span style="font:500 10.5px 'JetBrains Mono',monospace;color:#A1A1AA;border:1px solid #27272A;background:#1C1C21;padding:4px 8px;border-radius:5px">CATEGORY: {{ catUpper }}</span>
+                    <span style="font:500 10.5px 'JetBrains Mono',monospace;color:#A1A1AA;border:1px solid #27272A;background:#1C1C21;padding:4px 8px;border-radius:5px">AGENTS: 6</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:9px;padding:7px 12px;border-radius:8px;border:1px solid {{ statusBd }};background:{{ statusBg }}">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ statusDot }};animation:{{ statusAnim }}"></span>
+                  <span style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.1em;color:{{ statusFg }}">{{ statusLabel }}</span>
+                </div>
+              </div>
+              <div style="margin-top:16px;height:3px;border-radius:3px;background:#1C1C21;overflow:hidden">
+                <div style="height:100%;border-radius:3px;background:{{ accent }};width:{{ progressPct }};transition:width .5s cubic-bezier(.4,0,.2,1)"></div>
+              </div>
+              <sc-if value="{{ isRunning }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:10px;font-size:12px;color:#71717A">{{ loadingMsg }}</div>
+              </sc-if>
+            </div>
+
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:16px 18px">
+              <div style="font:600 10px 'JetBrains Mono',monospace;letter-spacing:.14em;color:#71717A;margin-bottom:14px">ORCHESTRATION PIPELINE</div>
+              <div style="display:flex;flex-wrap:wrap;align-items:stretch;gap:6px">
+                <sc-for list="{{ pipeline }}" as="n" hint-placeholder-count="8">
+                  <div style="display:flex;align-items:center;gap:6px;min-width:0">
+                    <sc-if value="{{ n.hasLine }}" hint-placeholder-val="{{ true }}">
+                      <span style="width:14px;height:1px;background:{{ n.lineColor }};flex:none"></span>
+                    </sc-if>
+                    <span style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;border:1px solid {{ n.bd }};background:{{ n.bg }};min-width:0">
+                      <span style="width:6px;height:6px;border-radius:50%;background:{{ n.dot }};flex:none;animation:{{ n.anim }}"></span>
+                      <span style="font:600 11px 'JetBrains Mono',monospace;color:{{ n.fg }};white-space:nowrap">{{ n.label }}</span>
+                    </span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">
+              <sc-for list="{{ visibleAgents }}" as="a" hint-placeholder-count="3">
+                <div style="background:#16161A;border:1px solid {{ a.cardBd }};border-radius:12px;padding:16px 17px;animation:ot-rise .35s ease both;display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:flex-start;gap:11px">
+                    <span style="width:32px;height:32px;border-radius:8px;background:#1C1C21;border:1px solid #27272A;display:grid;place-items:center;font:600 11px 'JetBrains Mono',monospace;color:{{ a.iconFg }};flex:none">{{ a.code }}</span>
+                    <span style="flex:1;min-width:0">
+                      <span style="display:block;font-size:13.5px;font-weight:700;letter-spacing:-.2px">{{ a.name }}</span>
+                      <span style="display:block;font-size:11.5px;line-height:1.4;color:#71717A;margin-top:3px">{{ a.role }}</span>
+                    </span>
+                    <span style="display:flex;align-items:center;gap:6px;flex:none;padding:4px 8px;border-radius:5px;border:1px solid {{ a.stBd }};background:{{ a.stBg }}">
+                      <span style="width:5px;height:5px;border-radius:50%;background:{{ a.stDot }};animation:{{ a.stAnim }}"></span>
+                      <span style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.09em;color:{{ a.stFg }}">{{ a.statusLabel }}</span>
+                    </span>
+                  </div>
+
+                  <sc-if value="{{ a.pending }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:7px;padding:2px 0 4px">
+                      <span style="height:9px;border-radius:4px;width:96%;background:linear-gradient(90deg,#1C1C21 0%,#26262C 50%,#1C1C21 100%);background-size:200% 100%;animation:ot-sheen 1.5s linear infinite"></span>
+                      <span style="height:9px;border-radius:4px;width:88%;background:linear-gradient(90deg,#1C1C21 0%,#26262C 50%,#1C1C21 100%);background-size:200% 100%;animation:ot-sheen 1.5s linear infinite"></span>
+                      <span style="height:9px;border-radius:4px;width:54%;background:linear-gradient(90deg,#1C1C21 0%,#26262C 50%,#1C1C21 100%);background-size:200% 100%;animation:ot-sheen 1.5s linear infinite"></span>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ a.done }}" hint-placeholder-val="{{ true }}">
+                    <div>
+                      <div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#52525B;margin-bottom:6px">ANALYSIS</div>
+                      <p style="margin:0;font-size:13px;line-height:1.6;color:#D4D4D8;text-wrap:pretty">{{ a.analysis }}</p>
+                      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px;padding-top:13px;border-top:1px solid #1F1F23">
+                        <span style="font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;padding:4px 8px;border-radius:5px;color:{{ a.vFg }};background:{{ a.vBg }};border:1px solid {{ a.vBd }}">{{ a.verdict }}</span>
+                        <span style="display:flex;align-items:center;gap:7px;flex:1;min-width:120px">
+                          <span style="font:500 10px 'JetBrains Mono',monospace;color:#71717A">CONF</span>
+                          <span style="flex:1;height:3px;border-radius:3px;background:#1C1C21;overflow:hidden;min-width:40px"><span style="display:block;height:100%;border-radius:3px;background:{{ a.vFg }};width:{{ a.confPct }};transition:width .7s ease"></span></span>
+                          <span style="font:600 11px 'JetBrains Mono',monospace;color:#FAFAFA">{{ a.confPct }}</span>
+                        </span>
+                        <span style="font:500 10px 'JetBrains Mono',monospace;color:#52525B">{{ a.time }}</span>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+              <div style="animation:ot-rise .45s ease both;background:linear-gradient(180deg,#17161E 0%,#141418 100%);border:1px solid #322C5C;border-radius:14px;padding:clamp(20px,3vw,32px);box-shadow:0 30px 70px -40px rgba(124,109,242,.55)">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
+                  <span style="width:6px;height:6px;border-radius:50%;background:{{ accent }}"></span>
+                  <span style="font:700 10px 'JetBrains Mono',monospace;letter-spacing:.18em;color:#A79BF6">FINAL DECISION</span>
+                  <span style="flex:1;height:1px;background:#27272A"></span>
+                  <span style="font:500 10px 'JetBrains Mono',monospace;color:#52525B">CONSENSUS LOCKED</span>
+                </div>
+                <div style="font-size:clamp(28px,4.6vw,46px);font-weight:800;letter-spacing:-1.4px;line-height:1.05">{{ finalDecision }}</div>
+                <p style="margin:16px 0 0;max-width:620px;font-size:13.5px;line-height:1.65;color:#A1A1AA;text-wrap:pretty">{{ finalBlurb }}</p>
+                <div style="display:flex;flex-wrap:wrap;gap:28px;margin-top:24px;padding-top:20px;border-top:1px solid #27272A">
+                  <div>
+                    <div style="font:600 10px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A;margin-bottom:6px">OVERALL CONFIDENCE</div>
+                    <div style="display:flex;align-items:baseline;gap:3px"><span style="font-size:30px;font-weight:800;letter-spacing:-1px">{{ overall }}</span><span style="font-size:16px;font-weight:700;color:#71717A">%</span></div>
+                  </div>
+                  <div>
+                    <div style="font:600 10px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A;margin-bottom:6px">CONSENSUS</div>
+                    <div style="display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:#D4D4D8">
+                      <span>5 agents approve</span>
+                      <span style="color:#71717A">1 agent disagrees (professionally)</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font:600 10px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A;margin-bottom:6px">DISSENT</div>
+                    <div style="font-size:12.5px;color:#D4D4D8">Devil’s Advocate · <span style="color:#EF4444">REJECT</span></div>
+                    <div style="font-size:11.5px;color:#52525B;margin-top:3px">Reason withheld on principle.</div>
+                  </div>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:24px">
+                  <button onClick="{{ reset }}" style="padding:10px 16px;border-radius:8px;border:1px solid {{ accentBorder }};background:{{ accent }};color:#fff;font-size:13px;font-weight:700;cursor:pointer" style-hover="filter:brightness(1.09)">Overthink Another Decision</button>
+                  <button style="padding:10px 16px;border-radius:8px;border:1px solid #27272A;background:#1C1C21;color:#FAFAFA;font-size:13px;font-weight:600;cursor:pointer" style-hover="border-color:#3F3F46">Share Decision</button>
+                  <button style="padding:10px 16px;border-radius:8px;border:1px solid #27272A;background:transparent;color:#A1A1AA;font-size:13px;font-weight:600;cursor:pointer" style-hover="color:#FAFAFA;border-color:#3F3F46">Save Analysis</button>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+                <sc-for list="{{ metrics }}" as="m" hint-placeholder-count="6">
+                  <div style="background:#111113;border:1px solid #27272A;border-radius:10px;padding:13px 14px">
+                    <div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#71717A;margin-bottom:8px">{{ m.label }}</div>
+                    <div style="font-size:19px;font-weight:700;letter-spacing:-.5px">{{ m.value }}</div>
+                    <div style="font-size:10.5px;color:#52525B;margin-top:4px">{{ m.note }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+          <aside data-rightpanel="1" style="width:340px;flex:none;position:sticky;top:76px;display:flex;flex-direction:column;gap:14px">
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;overflow:hidden">
+              <button onClick="{{ toggleLog }}" style="width:100%;display:flex;align-items:center;gap:9px;padding:13px 15px;background:transparent;border:0;border-bottom:1px solid #1F1F23;cursor:pointer;text-align:left">
+                <span style="width:6px;height:6px;border-radius:50%;background:#22C55E;animation:ot-pulse 1.8s ease-in-out infinite"></span>
+                <span style="flex:1;font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#A1A1AA">AGENT ACTIVITY</span>
+                <span style="font-size:11px;color:#52525B">{{ logChevron }}</span>
+              </button>
+              <sc-if value="{{ logOpen }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:12px 15px 15px;max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:8px">
+                  <sc-for list="{{ logs }}" as="g" hint-placeholder-count="4">
+                    <div style="display:flex;gap:9px;font:400 11px/1.45 'JetBrains Mono',monospace;animation:ot-rise .25s ease both">
+                      <span style="color:#52525B;flex:none">{{ g.t }}</span>
+                      <span style="color:{{ g.color }}">{{ g.msg }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ isRunning }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:9px;font:400 11px 'JetBrains Mono',monospace;color:#52525B"><span>····</span><span>listening<span style="animation:ot-pulse 1.2s infinite">_</span></span></div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:15px">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A;margin-bottom:12px">RUN TELEMETRY</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ telemetry }}" as="t" hint-placeholder-count="4">
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                    <span style="font-size:12px;color:#A1A1AA">{{ t.k }}</span>
+                    <span style="font:600 11.5px 'JetBrains Mono',monospace;color:#FAFAFA">{{ t.v }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:15px">
+              <div style="font:600 10.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A;margin-bottom:10px">MODEL ROUTING</div>
+              <div style="font-size:12px;line-height:1.6;color:#A1A1AA">Six agents, one question, zero necessity. Routed through <span style="color:#FAFAFA">ot-orchestrator-4</span> with redundant cross-examination enabled.</div>
+            </div>
+          </aside>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.7px">Decision History</h1>
+            <p style="margin:7px 0 0;font-size:13.5px;color:#A1A1AA">A permanent record of things you could have decided instantly.</p>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <div style="display:flex;gap:3px;padding:3px;border:1px solid #27272A;background:#111113;border-radius:9px">
+              <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+                <button onClick="{{ f.pick }}" style="padding:6px 13px;border-radius:6px;border:0;background:{{ f.bg }};color:{{ f.fg }};font-size:12px;font-weight:600;cursor:pointer">{{ f.label }}</button>
+              </sc-for>
+            </div>
+            <div style="flex:1;min-width:200px;display:flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid #27272A;background:#111113;border-radius:9px">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.3" stroke="#52525B" stroke-width="1.3"></circle><path d="M9.3 9.3 12.5 12.5" stroke="#52525B" stroke-width="1.3" stroke-linecap="round"></path></svg>
+              <input value="{{ search }}" onChange="{{ onSearch }}" placeholder="Search decisions…" style="flex:1;border:0;outline:none;background:transparent;color:#FAFAFA;font-size:13px">
+            </div>
+            <span style="font:500 11px 'JetBrains Mono',monospace;color:#52525B">{{ rowCount }} records</span>
+          </div>
+
+          <div style="background:#111113;border:1px solid #27272A;border-radius:12px;overflow:hidden">
+            <div style="display:grid;grid-template-columns:minmax(200px,2.4fr) minmax(140px,1.5fr) 110px 70px 100px 110px;gap:12px;padding:11px 18px;border-bottom:1px solid #1F1F23;background:#131317">
+              <span style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A">DECISION</span>
+              <span style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A">FINAL VERDICT</span>
+              <span style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A">LEVEL</span>
+              <span style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A">AGENTS</span>
+              <span style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A">CONFIDENCE</span>
+              <span style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A">DATE</span>
+            </div>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(200px,2.4fr) minmax(140px,1.5fr) 110px 70px 100px 110px;gap:12px;padding:14px 18px;border-bottom:1px solid #18181C;align-items:center;cursor:pointer;transition:background .12s" style-hover="background:#15151A">
+                <span style="font-size:13.5px;font-weight:600;letter-spacing:-.2px;min-width:0">{{ r.q }}</span>
+                <span style="font-size:13px;color:#D4D4D8;min-width:0">{{ r.verdict }}</span>
+                <span style="font:600 10px 'JetBrains Mono',monospace;letter-spacing:.08em;color:{{ r.lvlFg }};border:1px solid {{ r.lvlBd }};background:{{ r.lvlBg }};padding:3px 7px;border-radius:5px;justify-self:start">{{ r.level }}</span>
+                <span style="font:500 12px 'JetBrains Mono',monospace;color:#A1A1AA">{{ r.agents }}</span>
+                <span style="display:flex;align-items:center;gap:7px"><span style="flex:1;height:3px;background:#1C1C21;border-radius:3px;overflow:hidden"><span style="display:block;height:100%;width:{{ r.conf }};background:{{ r.confColor }}"></span></span><span style="font:600 11px 'JetBrains Mono',monospace">{{ r.conf }}</span></span>
+                <span style="font:500 11.5px 'JetBrains Mono',monospace;color:#71717A">{{ r.date }}</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:64px 24px;text-align:center">
+                <div style="width:38px;height:38px;margin:0 auto 16px;border-radius:10px;border:1px solid #27272A;background:#16161A;display:grid;place-items:center"><span style="width:10px;height:10px;border:1px solid #3F3F46;border-radius:2px;display:block"></span></div>
+                <div style="font-size:15px;font-weight:700;letter-spacing:-.3px">You haven’t overthought anything yet.</div>
+                <div style="font-size:13px;color:#71717A;margin-top:6px">Suspiciously healthy behavior.</div>
+                <button onClick="{{ goNew }}" style="margin-top:18px;padding:9px 15px;border-radius:8px;border:1px solid {{ accentBorder }};background:{{ accent }};color:#fff;font-size:13px;font-weight:700;cursor:pointer">Start Overthinking</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:16px 18px;display:flex;flex-wrap:wrap;gap:22px;align-items:center">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.6" stroke="#F59E0B" stroke-width="1.3"></circle><path d="M8 4.6v4" stroke="#F59E0B" stroke-width="1.3" stroke-linecap="round"></path><circle cx="8" cy="11.1" r=".75" fill="#F59E0B"></circle></svg>
+              <span style="font-size:13px;color:#D4D4D8">Error state preview — <span style="font-weight:700">“Overthinking failed successfully.”</span></span>
+            </div>
+            <span style="font-size:12.5px;color:#71717A">Our agents have somehow made this more complicated than expected.</span>
+            <div style="display:flex;gap:8px;margin-left:auto">
+              <button style="padding:7px 12px;border-radius:7px;border:1px solid #27272A;background:#1C1C21;color:#FAFAFA;font-size:12px;font-weight:600;cursor:pointer">Try Again</button>
+              <button style="padding:7px 12px;border-radius:7px;border:1px solid #27272A;background:transparent;color:#A1A1AA;font-size:12px;font-weight:600;cursor:pointer">Make Decision Yourself</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAnalytics }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.7px">Your Overthinking Analytics</h1>
+            <p style="margin:7px 0 0;font-size:13.5px;color:#A1A1AA">Quantifying hesitation since March 2026.</p>
+          </div>
+
+          <div style="background:linear-gradient(180deg,#17161E 0%,#141418 100%);border:1px solid #322C5C;border-radius:12px;padding:20px 22px;display:flex;flex-wrap:wrap;align-items:center;gap:18px">
+            <div style="flex:1;min-width:260px">
+              <div style="font:700 10px 'JetBrains Mono',monospace;letter-spacing:.16em;color:#A79BF6;margin-bottom:9px">EFFICIENCY INSIGHT</div>
+              <div style="font-size:clamp(17px,2.2vw,21px);font-weight:700;letter-spacing:-.5px;line-height:1.35;text-wrap:pretty">You could have saved approximately 2 hours by simply making these decisions yourself.</div>
+            </div>
+            <div style="display:flex;gap:26px">
+              <div><div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A;margin-bottom:6px">TIME RECLAIMABLE</div><div style="font-size:26px;font-weight:800;letter-spacing:-.8px">2h 04m</div></div>
+              <div><div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#71717A;margin-bottom:6px">TREND</div><div style="font-size:26px;font-weight:800;letter-spacing:-.8px;color:#EF4444">↑ 34%</div></div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+            <sc-for list="{{ statCards }}" as="s" hint-placeholder-count="5">
+              <div style="background:#16161A;border:1px solid #27272A;border-radius:11px;padding:15px 16px">
+                <div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#71717A;margin-bottom:10px">{{ s.label }}</div>
+                <div style="font-size:24px;font-weight:800;letter-spacing:-.7px">{{ s.value }}</div>
+                <div style="font-size:11px;color:#52525B;margin-top:5px">{{ s.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:18px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px">
+                <span style="font-size:13px;font-weight:700">Decisions Overthought This Week</span>
+                <span style="font:500 10.5px 'JetBrains Mono',monospace;color:#52525B">47 total</span>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:10px;height:150px">
+                <sc-for list="{{ weekBars }}" as="b" hint-placeholder-count="7">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+                    <span style="font:600 10px 'JetBrains Mono',monospace;color:#71717A">{{ b.n }}</span>
+                    <span style="width:100%;border-radius:5px 5px 2px 2px;background:{{ b.fill }};height:{{ b.h }};transition:height .5s ease"></span>
+                    <span style="font:500 10px 'JetBrains Mono',monospace;color:#52525B">{{ b.d }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:18px">
+              <div style="font-size:13px;font-weight:700;margin-bottom:20px">Most Overthought Categories</div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <sc-for list="{{ catBars }}" as="c" hint-placeholder-count="5">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+                      <span style="font-size:12.5px;color:#D4D4D8">{{ c.label }}</span>
+                      <span style="font:600 11px 'JetBrains Mono',monospace;color:#71717A">{{ c.pct }}</span>
+                    </div>
+                    <div style="height:5px;border-radius:4px;background:#1C1C21;overflow:hidden"><div style="height:100%;border-radius:4px;width:{{ c.pct }};background:{{ c.fill }}"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:18px">
+              <div style="font-size:13px;font-weight:700;margin-bottom:18px">Agent Agreement Rate</div>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ agreeRows }}" as="a" hint-placeholder-count="6">
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <span style="width:26px;height:26px;border-radius:7px;background:#1C1C21;border:1px solid #27272A;display:grid;place-items:center;font:600 9.5px 'JetBrains Mono',monospace;color:#A1A1AA;flex:none">{{ a.code }}</span>
+                    <span style="flex:1;font-size:12.5px;color:#D4D4D8">{{ a.name }}</span>
+                    <span style="width:90px;height:4px;border-radius:3px;background:#1C1C21;overflow:hidden"><span style="display:block;height:100%;width:{{ a.pct }};background:{{ a.fill }}"></span></span>
+                    <span style="width:42px;text-align:right;font:600 11.5px 'JetBrains Mono',monospace">{{ a.pct }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:18px;display:flex;flex-direction:column">
+              <div style="font-size:13px;font-weight:700;margin-bottom:6px">Average Decision Complexity</div>
+              <div style="font-size:11.5px;color:#71717A;margin-bottom:20px">Measured against decisions that actually matter.</div>
+              <div style="display:flex;align-items:baseline;gap:6px"><span style="font-size:44px;font-weight:800;letter-spacing:-1.6px">1.4</span><span style="font-size:15px;font-weight:700;color:#52525B">/ 100</span></div>
+              <div style="margin-top:16px;height:6px;border-radius:4px;background:#1C1C21;overflow:hidden"><div style="height:100%;width:1.4%;min-width:4px;background:#22C55E;border-radius:4px"></div></div>
+              <div style="margin-top:14px;padding-top:14px;border-top:1px solid #1F1F23;font-size:12px;line-height:1.6;color:#71717A">Meanwhile, average compute allocated per decision: <span style="color:#FAFAFA">4,821 tokens</span>.</div>
+              <div style="margin-top:auto;padding-top:16px;font-size:11.5px;color:#52525B">Not enough unnecessary decisions yet? Keep going.</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isLab }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between">
+            <div>
+              <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.7px">Agent Lab</h1>
+              <p style="margin:7px 0 0;font-size:13.5px;color:#A1A1AA">Inspect, reorder and disable the experts arguing on your behalf.</p>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span style="font:500 11px 'JetBrains Mono',monospace;color:#52525B;align-self:center">{{ enabledCount }} of 6 enabled</span>
+              <button style="padding:9px 14px;border-radius:8px;border:1px solid {{ accentBorder }};background:{{ accent }};color:#fff;font-size:13px;font-weight:700;cursor:pointer" style-hover="filter:brightness(1.09)">+ Create Custom Agent</button>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:13px">
+            <sc-for list="{{ labAgents }}" as="a" hint-placeholder-count="6">
+              <div style="background:#16161A;border:1px solid #27272A;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:13px;opacity:{{ a.opacity }};transition:opacity .2s">
+                <div style="display:flex;align-items:flex-start;gap:11px">
+                  <span style="width:30px;height:30px;border-radius:8px;background:#1C1C21;border:1px solid #27272A;display:grid;place-items:center;font:600 10.5px 'JetBrains Mono',monospace;color:#A79BF6;flex:none">{{ a.code }}</span>
+                  <span style="flex:1;min-width:0">
+                    <span style="display:block;font-size:13.5px;font-weight:700;letter-spacing:-.2px">{{ a.name }}</span>
+                    <span style="display:block;font:500 10.5px 'JetBrains Mono',monospace;color:#52525B;margin-top:3px">PRIORITY {{ a.rank }}</span>
+                  </span>
+                  <span style="display:flex;gap:4px;flex:none">
+                    <button onClick="{{ a.up }}" style="width:24px;height:24px;border-radius:6px;border:1px solid #27272A;background:#1C1C21;color:#A1A1AA;font-size:11px;cursor:pointer" style-hover="color:#FAFAFA;border-color:#3F3F46">↑</button>
+                    <button onClick="{{ a.down }}" style="width:24px;height:24px;border-radius:6px;border:1px solid #27272A;background:#1C1C21;color:#A1A1AA;font-size:11px;cursor:pointer" style-hover="color:#FAFAFA;border-color:#3F3F46">↓</button>
+                  </span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div>
+                    <div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:4px">PERSONALITY</div>
+                    <div style="font-size:12.5px;line-height:1.5;color:#D4D4D8">{{ a.personality }}</div>
+                  </div>
+                  <div style="display:flex;gap:18px">
+                    <div><div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:4px">BIAS</div><div style="font-size:12px;color:#A1A1AA">{{ a.bias }}</div></div>
+                    <div><div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:4px">AVG CONF</div><div style="font:600 12px 'JetBrains Mono',monospace">{{ a.avg }}</div></div>
+                    <div><div style="font:600 9.5px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:4px">ANALYZED</div><div style="font:600 12px 'JetBrains Mono',monospace">{{ a.count }}</div></div>
+                  </div>
+                </div>
+                <div style="margin-top:auto;padding-top:12px;border-top:1px solid #1F1F23;display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-size:12px;color:{{ a.toggleFg }};font-weight:600">{{ a.toggleLabel }}</span>
+                  <button onClick="{{ a.toggle }}" style="width:38px;height:21px;border-radius:999px;border:1px solid {{ a.trackBd }};background:{{ a.trackBg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:{{ a.knobPos }};transition:all .18s">
+                    <span style="width:15px;height:15px;border-radius:50%;background:{{ a.knobBg }};margin:0 2px;display:block;transition:all .18s"></span>
+                  </button>
+                </div>
+              </div>
+            </sc-for>
+
+            <div style="background:#111113;border:1px dashed #27272A;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:30px;height:30px;border-radius:8px;border:1px dashed #3F3F46;display:grid;place-items:center;color:#52525B;font-size:15px;flex:none">+</span>
+                <span><span style="display:block;font-size:13.5px;font-weight:700">Create Custom Agent</span><span style="display:block;font-size:11px;color:#71717A;margin-top:2px">Add one more voice to the committee.</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="padding:9px 11px;border:1px solid #27272A;border-radius:8px;background:#16161A"><div style="font:600 9px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:3px">AGENT NAME</div><div style="font-size:12.5px;color:#FAFAFA">My Mom</div></div>
+                <div style="padding:9px 11px;border:1px solid #27272A;border-radius:8px;background:#16161A"><div style="font:600 9px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:3px">ROLE</div><div style="font-size:12.5px;color:#FAFAFA">Rejects unnecessary purchases.</div></div>
+                <div style="padding:9px 11px;border:1px solid #27272A;border-radius:8px;background:#16161A"><div style="font:600 9px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:3px">PERSONALITY</div><div style="font-size:12.5px;color:#71717A">Warm, but fiscally merciless.</div></div>
+                <div style="padding:9px 11px;border:1px solid #27272A;border-radius:8px;background:#16161A"><div style="font:600 9px 'JetBrains Mono',monospace;letter-spacing:.11em;color:#52525B;margin-bottom:3px">INSTRUCTIONS</div><div style="font-size:12.5px;color:#71717A">Ask if there is food at home before approving anything.</div></div>
+              </div>
+              <button style="margin-top:auto;padding:9px;border-radius:8px;border:1px solid #27272A;background:#1C1C21;color:#FAFAFA;font-size:12.5px;font-weight:600;cursor:pointer" style-hover="border-color:#3F3F46">Deploy Agent</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+          <div>
+            <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.7px">Settings</h1>
+            <p style="margin:7px 0 0;font-size:13.5px;color:#A1A1AA">Configure how thoroughly the system wastes your time.</p>
+          </div>
+
+          <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:18px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px">Appearance</div>
+            <div style="font-size:12px;color:#71717A;margin-bottom:14px">Dark is the only serious option.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ themes }}" as="t" hint-placeholder-count="3">
+                <button style="padding:9px 15px;border-radius:8px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};font-size:12.5px;font-weight:600;cursor:pointer">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:18px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:14px">Default Overthinking Level</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+              <sc-for list="{{ levels }}" as="l" hint-placeholder-count="3">
+                <button onClick="{{ l.pick }}" style="text-align:left;padding:11px 13px;border-radius:9px;border:1px solid {{ l.bd }};background:{{ l.bg }};cursor:pointer">
+                  <span style="display:block;font-size:12.5px;font-weight:700;color:{{ l.fg }}">{{ l.name }}</span>
+                  <span style="display:block;font-size:11px;color:#71717A;margin-top:4px;line-height:1.45">{{ l.desc }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#111113;border:1px solid #27272A;border-radius:12px;padding:18px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px">Humor Level</div>
+            <div style="font-size:12px;color:#71717A;margin-bottom:14px">Affects agent tone. Does not affect agent confidence.</div>
+            <div style="display:flex;gap:3px;padding:3px;border:1px solid #27272A;background:#16161A;border-radius:9px;width:fit-content;max-width:100%;flex-wrap:wrap">
+              <sc-for list="{{ humorOpts }}" as="h" hint-placeholder-count="3">
+                <button onClick="{{ h.pick }}" style="padding:7px 16px;border-radius:6px;border:0;background:{{ h.bg }};color:{{ h.fg }};font-size:12.5px;font-weight:600;cursor:pointer">{{ h.label }}</button>
+              </sc-for>
+            </div>
+            <div style="font-size:12px;color:#52525B;margin-top:11px">{{ humorNote }}</div>
+          </div>
+
+          <div style="background:#111113;border:1px solid #27272A;border-radius:12px;overflow:hidden">
+            <div style="padding:16px 18px;border-bottom:1px solid #1F1F23;font-size:13px;font-weight:700">AI Provider</div>
+            <sc-for list="{{ providers }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #18181C">
+                <span style="width:11px;height:11px;border-radius:50%;border:1px solid {{ p.ring }};display:grid;place-items:center;flex:none"><span style="width:5px;height:5px;border-radius:50%;background:{{ p.inner }};display:block"></span></span>
+                <span style="flex:1;min-width:0"><span style="display:block;font-size:12.5px;font-weight:600">{{ p.name }}</span><span style="display:block;font-size:11.5px;color:#71717A;margin-top:2px">{{ p.note }}</span></span>
+                <span style="font:500 10.5px 'JetBrains Mono',monospace;color:#52525B">{{ p.latency }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#111113;border:1px solid #27272A;border-radius:12px;overflow:hidden">
+            <sc-for list="{{ toggles }}" as="t" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;border-bottom:1px solid #18181C">
+                <span style="flex:1;min-width:0"><span style="display:block;font-size:12.5px;font-weight:600">{{ t.label }}</span><span style="display:block;font-size:11.5px;color:#71717A;margin-top:3px;line-height:1.45">{{ t.note }}</span></span>
+                <button onClick="{{ t.toggle }}" style="width:38px;height:21px;flex:none;border-radius:999px;border:1px solid {{ t.trackBd }};background:{{ t.trackBg }};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:{{ t.knobPos }};transition:all .18s">
+                  <span style="width:15px;height:15px;border-radius:50%;background:{{ t.knobBg }};margin:0 2px;display:block"></span>
+                </button>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#111113;border:1px solid #3A2224;border-radius:12px;padding:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+            <div style="flex:1;min-width:220px">
+              <div style="font-size:13px;font-weight:700;color:#FAFAFA">Data &amp; History</div>
+              <div style="font-size:12px;color:#71717A;margin-top:4px">Deleting your history will not delete the memory of the decisions.</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button style="padding:8px 13px;border-radius:7px;border:1px solid #27272A;background:#1C1C21;color:#FAFAFA;font-size:12px;font-weight:600;cursor:pointer">Export JSON</button>
+              <button style="padding:8px 13px;border-radius:7px;border:1px solid #3A2224;background:transparent;color:#EF4444;font-size:12px;font-weight:600;cursor:pointer" style-hover="background:rgba(239,68,68,.08)">Delete All History</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#7C6DF2&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#7C6DF2&quot;,&quot;#6366F1&quot;,&quot;#8B5CF6&quot;,&quot;#5B8DEF&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;defaultLevel&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Severe&quot;,&quot;options&quot;:[&quot;Normal&quot;,&quot;Severe&quot;,&quot;Existential&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Defaults&quot;},&quot;humorLevel&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;Dry&quot;,&quot;options&quot;:[&quot;Professional&quot;,&quot;Dry&quot;,&quot;Unhinged&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Defaults&quot;}}">
+class Component extends DCLogic {
+  state = {
+    page: 'new', phase: 'input', q: '', cat: null, level: null,
+    step: -1, logs: [], logOpen: true, overall: 0, msgIdx: 0,
+    hFilter: 'All', search: '', humor: null,
+    order: [0,1,2,3,4,5], disabled: {},
+    toggles: { skeleton: true, notify: false, sound: false, autosave: true, verbose: true }
+  };
+
+  timers = [];
+  msgTimer = null;
+
+  componentWillUnmount() { this.timers.forEach(clearTimeout); clearInterval(this.msgTimer); }
+
+  get accent() { return this.props.accent || '#7C6DF2'; }
+  get level() { return this.state.level || this.props.defaultLevel || 'Severe'; }
+  get humor() { return this.state.humor || this.props.humorLevel || 'Dry'; }
+
+  agentDefs() {
+    return [
+      { code:'FA', name:'Financial Analyst', role:'Evaluates whether this decision will destroy your financial future.',
+        analysis:'The proposed ₹250 expense represents approximately zero meaningful long-term financial impact, although repeated biryani acquisition could theoretically compound into a mid-sized liability by 2041.',
+        verdict:'APPROVE', conf:87, time:'1.9s', personality:'Treats every rupee as a leading indicator.', bias:'Mild catastrophizing', avg:'84%', count:'142', agree:78 },
+      { code:'RA', name:'Risk Analyst', role:'Models worst-case outcomes nobody requested.',
+        analysis:'Identified 14 downside scenarios, including delivery delay, insufficient raita, and the non-trivial probability of falling asleep immediately afterwards. None are fatal. One is inconvenient.',
+        verdict:'CONCERNED', conf:74, time:'2.3s', personality:'Assumes everything could go wrong.', bias:'Extreme pessimism', avg:'82%', count:'128', agree:41 },
+      { code:'EA', name:'Emotional Analyst', role:'Determines what you had already decided before asking.',
+        analysis:'Sentiment analysis of the phrasing indicates the user has already mentally committed. The question was not a question. It was a request for institutional validation.',
+        verdict:'APPROVE', conf:96, time:'1.4s', personality:'Suspiciously perceptive.', bias:'Assumes you want it', avg:'93%', count:'151', agree:88 },
+      { code:'PA', name:'Practicality Analyst', role:'Asks whether this entire analysis needs to exist.',
+        analysis:'Six agents have now been provisioned to resolve a question with two possible answers. Practical recommendation: eat. Secondary recommendation: reconsider this platform.',
+        verdict:'WHY ARE WE ANALYZING THIS?', conf:81, time:'1.1s', personality:'The only one making sense.', bias:'Aggressive realism', avg:'79%', count:'137', agree:62 },
+      { code:'DA', name:'Devil’s Advocate', role:'Disagrees on principle, regardless of evidence.',
+        analysis:'While the other five agents have reached a comfortable consensus, consensus is precisely what a system like this should distrust. I therefore object. I decline to elaborate further.',
+        verdict:'REJECT', conf:41, time:'3.0s', personality:'Contrarian as a service.', bias:'Structural disagreement', avg:'46%', count:'149', agree:19 },
+      { code:'FJ', name:'Final Judge', role:'Synthesizes six opinions into one obvious answer.',
+        analysis:'Weighing all submissions, including one dissent lodged without justification, the tribunal finds overwhelming support for the proposed action. Motion carried. Costs awarded to hunger.',
+        verdict:'APPROVE', conf:94, time:'2.1s', personality:'Calm, final, mildly tired.', bias:'Pro-consensus', avg:'91%', count:'152', agree:95 }
+    ];
+  }
+
+  loadingMsgs() {
+    return ['Assembling unnecessary experts…','Calculating consequences that probably don’t matter…','Consulting agents who disagree professionally…','Transforming a simple question into an infrastructure problem…','Searching for complexity…'];
+  }
+
+  logScript() {
+    return [
+      { t:'09:41:02', msg:'Decision received · queued for orchestration', color:'#A1A1AA' },
+      { t:'09:41:03', msg:'Financial Agent initialized', color:'#A1A1AA' },
+      { t:'09:41:04', msg:'Potential ₹250 financial exposure detected', color:'#F59E0B' },
+      { t:'09:41:06', msg:'Risk Agent enumerating worst-case branches (14)', color:'#A1A1AA' },
+      { t:'09:41:07', msg:'Emotional Agent suspects user already wants biryani', color:'#A79BF6' },
+      { t:'09:41:09', msg:'Practicality Agent questioning the existence of this pipeline', color:'#A1A1AA' },
+      { t:'09:41:10', msg:'Devil’s Advocate disagrees for no clear reason', color:'#EF4444' },
+      { t:'09:41:12', msg:'Final Judge weighting 6 submissions', color:'#A1A1AA' },
+      { t:'09:41:13', msg:'Consensus reached · confidence 94%', color:'#22C55E' }
+    ];
+  }
+
+  go(page) { return () => { clearInterval(this.msgTimer); this.timers.forEach(clearTimeout); this.timers = []; this.setState({ page, phase: page === 'new' ? this.state.phase : this.state.phase }); }; }
+
+  begin = () => {
+    this.timers.forEach(clearTimeout); this.timers = [];
+    const script = this.logScript();
+    this.setState({ phase: 'running', step: 0, logs: script.slice(0, 2), overall: 0, msgIdx: 0 });
+    this.msgTimer = setInterval(() => this.setState(s => ({ msgIdx: (s.msgIdx + 1) % 5 })), 2400);
+    for (let i = 0; i < 6; i++) {
+      this.timers.push(setTimeout(() => {
+        this.setState({ step: i + 1, logs: script.slice(0, Math.min(script.length, 3 + i)) });
+      }, 1400 * (i + 1)));
+    }
+    this.timers.push(setTimeout(() => {
+      clearInterval(this.msgTimer);
+      this.setState({ phase: 'done', step: 6, logs: script });
+      let v = 0;
+      const iv = setInterval(() => { v += 4; if (v >= 94) { v = 94; clearInterval(iv); } this.setState({ overall: v }); }, 26);
+    }, 1400 * 6 + 700));
+  };
+
+  reset = () => {
+    this.timers.forEach(clearTimeout); this.timers = []; clearInterval(this.msgTimer);
+    this.setState({ phase: 'input', step: -1, logs: [], overall: 0 });
+  };
+
+  historyRows() {
+    return [
+      { q:'Should I drink coffee?', verdict:'Drink it. Immediately.', level:'Severe', agents:'6', conf:'91%', date:'Today' },
+      { q:'Should I attend class?', verdict:'Unfortunately, yes.', level:'Existential', agents:'8', conf:'96%', date:'Yesterday' },
+      { q:'Should I buy another keyboard?', verdict:'Absolutely not.', level:'Severe', agents:'6', conf:'89%', date:'2 days ago' },
+      { q:'Should I reply now or wait 5 minutes?', verdict:'Wait 4 minutes.', level:'Existential', agents:'8', conf:'73%', date:'3 days ago' },
+      { q:'Should I start studying?', verdict:'Yes, but you won’t.', level:'Normal', agents:'4', conf:'68%', date:'Last week' },
+      { q:'Should I text her again?', verdict:'The agents refused to answer.', level:'Existential', agents:'8', conf:'52%', date:'Last week' }
+    ];
+  }
+
+  renderVals() {
+    const A = this.accent, s = this.state, lvl = this.level;
+    const pageTitles = { new:'New Decision', history:'Decision History', analytics:'Analytics', lab:'Agent Lab', settings:'Settings' };
+    const nav = [
+      { id:'new', label:'New Decision', badge:false },
+      { id:'history', label:'Decision History', badge:'6' },
+      { id:'analytics', label:'Analytics', badge:false },
+      { id:'lab', label:'Agent Lab', badge:false },
+      { id:'settings', label:'Settings', badge:false }
+    ].map(n => {
+      const on = s.page === n.id;
+      return { ...n, go: this.go(n.id), bg: on ? '#1C1C21' : 'transparent', bd: on ? '#27272A' : 'transparent',
+        fg: on ? '#FAFAFA' : '#A1A1AA', fw: on ? 600 : 500, dot: on ? A : '#3F3F46' };
+    });
+
+    const cats = ['Food','Career','College','Relationships','Money','Life','Other'].map(c => {
+      const on = s.cat === c;
+      return { label:c, pick: () => this.setState({ cat: on ? null : c }),
+        bg: on ? 'rgba(124,109,242,.13)' : '#1C1C21', bd: on ? '#4B3FA8' : '#27272A', fg: on ? '#C3BBFA' : '#A1A1AA' };
+    });
+
+    const levelDefs = [
+      { name:'Normal', desc:'A reasonable amount of unnecessary analysis.', warn:false },
+      { name:'Severe', desc:'Several AI agents will question every possible consequence.', warn:false },
+      { name:'Existential', desc:'Your simple decision may become a philosophical crisis.', warn:true }
+    ];
+    const levels = levelDefs.map(l => {
+      const on = lvl === l.name;
+      return { ...l, pick: () => this.setState({ level: l.name }),
+        bg: on ? 'rgba(124,109,242,.10)' : '#16161A', bd: on ? '#4B3FA8' : '#27272A',
+        ring: on ? A : '#3F3F46', inner: on ? A : 'transparent', fg: on ? '#FAFAFA' : '#D4D4D8' };
+    });
+    const levelHints = { Normal:'4 agents · ~7s', Severe:'6 agents · ~12s', Existential:'8 agents · ~19s' };
+
+    const examples = ['Should I go to class today?','Should I buy another mechanical keyboard?','Should I reply now or wait 5 minutes?','Should I drink coffee?','Should I start studying?']
+      .map(e => ({ label:e, pick: () => this.setState({ q: e }) }));
+
+    const question = (s.q || '').trim() || 'Should I order biryani?';
+    const defs = this.agentDefs();
+    const agents = defs.map((d, i) => {
+      const done = s.step > i || s.phase === 'done';
+      const thinking = s.step === i && s.phase === 'running';
+      const vc = { APPROVE:'#22C55E', REJECT:'#EF4444', CONCERNED:'#F59E0B', UNCERTAIN:'#A1A1AA' }[d.verdict] || A;
+      return { ...d, done, pending: thinking,
+        statusLabel: done ? 'COMPLETED' : thinking ? 'THINKING' : 'QUEUED',
+        stFg: done ? '#22C55E' : thinking ? '#C3BBFA' : '#71717A',
+        stDot: done ? '#22C55E' : thinking ? A : '#3F3F46',
+        stBg: done ? 'rgba(34,197,94,.08)' : thinking ? 'rgba(124,109,242,.12)' : '#1C1C21',
+        stBd: done ? 'rgba(34,197,94,.28)' : thinking ? '#4B3FA8' : '#27272A',
+        stAnim: thinking ? 'ot-pulse 1.1s ease-in-out infinite' : 'none',
+        cardBd: thinking ? '#3A3170' : '#27272A',
+        iconFg: done ? '#A79BF6' : '#71717A',
+        vFg: vc, vBg: vc === A ? 'rgba(124,109,242,.12)' : vc === '#22C55E' ? 'rgba(34,197,94,.09)' : vc === '#EF4444' ? 'rgba(239,68,68,.09)' : 'rgba(245,158,11,.09)',
+        vBd: vc === A ? '#4B3FA8' : vc + '44', confPct: d.conf + '%' };
+    });
+    const visibleAgents = agents.filter(a => a.done || a.pending);
+
+    const pipeNodes = ['Input', ...defs.map(d => d.name.replace('Analyst','Agent')), 'Verdict'];
+    const pipeline = pipeNodes.map((label, i) => {
+      const state = i === 0 ? (s.phase === 'input' ? 'queued' : 'done')
+        : i === 7 ? (s.phase === 'done' ? 'done' : 'queued')
+        : (s.step > i - 1 || s.phase === 'done') ? 'done' : (s.step === i - 1 && s.phase === 'running') ? 'active' : 'queued';
+      return { label, hasLine: i > 0,
+        lineColor: state === 'queued' ? '#27272A' : '#3F3F46',
+        bg: state === 'active' ? 'rgba(124,109,242,.12)' : state === 'done' ? '#1C1C21' : '#131317',
+        bd: state === 'active' ? '#4B3FA8' : state === 'done' ? '#27272A' : '#1F1F23',
+        fg: state === 'queued' ? '#52525B' : state === 'active' ? '#C3BBFA' : '#D4D4D8',
+        dot: state === 'active' ? A : state === 'done' ? '#22C55E' : '#3F3F46',
+        anim: state === 'active' ? 'ot-pulse 1.1s ease-in-out infinite' : 'none' };
+    });
+
+    const running = s.phase === 'running', done = s.phase === 'done';
+    const rows = this.historyRows()
+      .filter(r => s.hFilter === 'All' || r.level === s.hFilter)
+      .filter(r => r.q.toLowerCase().includes(s.search.toLowerCase()))
+      .map(r => {
+        const c = { Normal:'#71717A', Severe:'#A79BF6', Existential:'#F59E0B' }[r.level];
+        return { ...r, lvlFg:c, lvlBd:c + '3d', lvlBg:c + '14',
+          confColor: parseInt(r.conf) > 85 ? '#22C55E' : parseInt(r.conf) > 65 ? '#F59E0B' : '#EF4444' };
+      });
+
+    const labAgents = s.order.map((idx, pos) => {
+      const d = defs[idx], off = !!s.disabled[idx];
+      return { ...d, rank: String(pos + 1).padStart(2, '0'), opacity: off ? .5 : 1,
+        toggleLabel: off ? 'Disabled' : 'Enabled', toggleFg: off ? '#71717A' : '#22C55E',
+        trackBg: off ? '#1C1C21' : 'rgba(34,197,94,.22)', trackBd: off ? '#27272A' : 'rgba(34,197,94,.45)',
+        knobPos: off ? 'flex-start' : 'flex-end', knobBg: off ? '#52525B' : '#22C55E',
+        toggle: () => this.setState(st => ({ disabled: { ...st.disabled, [idx]: !st.disabled[idx] } })),
+        up: () => this.setState(st => { const o = [...st.order]; if (pos > 0) { [o[pos-1], o[pos]] = [o[pos], o[pos-1]]; } return { order: o }; }),
+        down: () => this.setState(st => { const o = [...st.order]; if (pos < o.length - 1) { [o[pos+1], o[pos]] = [o[pos], o[pos+1]]; } return { order: o }; }) };
+    });
+
+    const toggleDefs = [
+      { k:'skeleton', label:'Show agent reasoning as it streams', note:'Watch six professionals slowly reach an obvious conclusion.' },
+      { k:'verbose', label:'Verbose orchestration log', note:'Every internal event, including the pointless ones.' },
+      { k:'notify', label:'Notify me when a verdict is ready', note:'You will have already acted by then.' },
+      { k:'sound', label:'Consensus chime', note:'A small sound of institutional relief.' },
+      { k:'autosave', label:'Auto-save every analysis', note:'For future regret and quarterly review.' }
+    ].map(t => {
+      const on = s.toggles[t.k];
+      return { ...t, trackBg: on ? 'rgba(124,109,242,.25)' : '#1C1C21', trackBd: on ? '#4B3FA8' : '#27272A',
+        knobPos: on ? 'flex-end' : 'flex-start', knobBg: on ? A : '#52525B',
+        toggle: () => this.setState(st => ({ toggles: { ...st.toggles, [t.k]: !st.toggles[t.k] } })) };
+    });
+
+    const humorOpts = ['Professional','Dry','Unhinged'].map(h => {
+      const on = this.humor === h;
+      return { label:h, pick: () => this.setState({ humor: h }),
+        bg: on ? '#1C1C21' : 'transparent', fg: on ? '#FAFAFA' : '#71717A' };
+    });
+    const humorNotes = { Professional:'Agents will pretend this is a board matter.', Dry:'Agents remain deadpan throughout. Recommended.', Unhinged:'Agents may develop opinions about your life.' };
+
+    return {
+      accent: A, accentBorder: '#6A5AE0',
+      nav, pageTitle: pageTitles[s.page],
+      pageMeta: s.page === 'new' ? (done ? 'run complete · 6 agents' : running ? 'run active · orchestrating' : 'idle · awaiting trivial input')
+        : s.page === 'history' ? '6 records · 43 agent-hours'
+        : s.page === 'analytics' ? 'period: last 7 days'
+        : s.page === 'lab' ? '6 agents · 1 draft' : 'workspace configuration',
+      isNew: s.page === 'new', isHistory: s.page === 'history', isAnalytics: s.page === 'analytics',
+      isLab: s.page === 'lab', isSettings: s.page === 'settings',
+      isInput: s.page === 'new' && s.phase === 'input',
+      inAnalysis: s.page === 'new' && s.phase !== 'input',
+      isRunning: running, isDone: done,
+      q: s.q, onQ: e => this.setState({ q: e.target.value }),
+      cats, levels, levelHint: levelHints[lvl], examples, begin: this.begin, reset: this.reset,
+      goNew: this.go('new'),
+      question, runId: 'RUN-8F42C', levelUpper: lvl.toUpperCase(), catUpper: (s.cat || 'Unclassified').toUpperCase(),
+      statusLabel: done ? 'ANALYSIS COMPLETE' : 'ANALYSIS IN PROGRESS',
+      statusFg: done ? '#22C55E' : '#C3BBFA',
+      statusDot: done ? '#22C55E' : A,
+      statusBg: done ? 'rgba(34,197,94,.08)' : 'rgba(124,109,242,.12)',
+      statusBd: done ? 'rgba(34,197,94,.3)' : '#4B3FA8',
+      statusAnim: done ? 'none' : 'ot-pulse 1.2s ease-in-out infinite',
+      progressPct: done ? '100%' : Math.round(Math.max(0, s.step) / 6 * 100) + '%',
+      loadingMsg: this.loadingMsgs()[s.msgIdx],
+      pipeline, visibleAgents,
+      logs: s.logs, logOpen: s.logOpen, logChevron: s.logOpen ? '⌄' : '›',
+      toggleLog: () => this.setState(st => ({ logOpen: !st.logOpen })),
+      telemetry: [
+        { k:'Agents provisioned', v:'6' },
+        { k:'Cross-examinations', v: done ? '18' : String(Math.max(0, s.step) * 3) },
+        { k:'Tokens consumed', v: done ? '4,821' : (Math.max(0, s.step) * 780).toLocaleString() },
+        { k:'Estimated cost', v: done ? '₹0.37' : '₹0.0' + Math.max(0, s.step) },
+        { k:'Necessity score', v:'0.4 / 10' }
+      ],
+      finalDecision: 'Order the biryani.',
+      finalBlurb: 'After extensive computational analysis, six artificial intelligence agents have concluded what you already knew before opening this application.',
+      overall: s.overall,
+      metrics: [
+        { label:'AGENTS CONSULTED', value:'6', note:'Five would have been plenty.' },
+        { label:'ANALYSIS TIME', value:'11.8 sec', note:'Your gut took 0.4s.' },
+        { label:'TOKENS WASTED', value:'4,821', note:'Peak allocation: Devil’s Advocate.' },
+        { label:'ESTIMATED COST', value:'₹0.37', note:'Biryani not included.' },
+        { label:'DECISION COMPLEXITY', value:'1.2 / 100', note:'Statistically trivial.' },
+        { label:'OVERTHINKING SCORE', value:'97 / 100', note:'Personal best.' }
+      ],
+      filters: ['All','Normal','Severe','Existential'].map(f => ({
+        label:f, pick: () => this.setState({ hFilter:f }),
+        bg: s.hFilter === f ? '#1C1C21' : 'transparent', fg: s.hFilter === f ? '#FAFAFA' : '#71717A' })),
+      search: s.search, onSearch: e => this.setState({ search: e.target.value }),
+      rows, rowCount: rows.length, noRows: rows.length === 0,
+      statCards: [
+        { label:'TOTAL DECISIONS OVERTHOUGHT', value:'147', note:'+12 this week' },
+        { label:'AVG AGENTS CONSULTED', value:'6.4', note:'Consistently excessive' },
+        { label:'TOKENS WASTED', value:'712k', note:'≈ 3 short novels' },
+        { label:'TIME AVOIDING DECISIONS', value:'4h 51m', note:'Excludes deliberation' },
+        { label:'AVG DECISION CONFIDENCE', value:'88%', note:'Unearned but stable' }
+      ],
+      weekBars: [
+        { d:'MON', n:'4', h:'32%' }, { d:'TUE', n:'6', h:'48%' }, { d:'WED', n:'9', h:'72%' },
+        { d:'THU', n:'5', h:'40%' }, { d:'FRI', n:'12', h:'96%' }, { d:'SAT', n:'8', h:'64%' }, { d:'SUN', n:'3', h:'24%' }
+      ].map((b, i) => ({ ...b, fill: b.n === '12' ? A : '#2A2A32' })),
+      catBars: [
+        { label:'Food', pct:'38%', fill:A }, { label:'College', pct:'24%', fill:'#3A3170' },
+        { label:'Relationships', pct:'17%', fill:'#2F2C4A' }, { label:'Money', pct:'13%', fill:'#2A2A32' },
+        { label:'Career', pct:'8%', fill:'#25252B' }
+      ],
+      agreeRows: defs.map(d => ({ code:d.code, name:d.name, pct:d.agree + '%',
+        fill: d.agree > 70 ? '#22C55E' : d.agree > 40 ? '#F59E0B' : '#EF4444' })),
+      enabledCount: 6 - Object.values(s.disabled).filter(Boolean).length,
+      labAgents,
+      themes: ['Dark','Light','System'].map(t => ({ label:t, bg: t === 'Dark' ? '#1C1C21' : 'transparent',
+        bd: t === 'Dark' ? '#4B3FA8' : '#27272A', fg: t === 'Dark' ? '#FAFAFA' : '#71717A' })),
+      humorOpts, humorNote: humorNotes[this.humor],
+      providers: [
+        { name:'Overthinker Orchestrator v4', note:'Six-agent default. Deliberately slow.', latency:'~12s', ring:A, inner:A },
+        { name:'Single-Model Fallback', note:'Answers instantly. Defeats the purpose.', latency:'~0.8s', ring:'#3F3F46', inner:'transparent' },
+        { name:'Bring Your Own Key', note:'Route agents through your own provider.', latency:'varies', ring:'#3F3F46', inner:'transparent' }
+      ],
+      toggles: toggleDefs
+    };
+  }
+}
+</script>
+</body>
+</html>
