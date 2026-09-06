@@ -48,7 +48,7 @@ def create_app(settings_override: Settings | None = None, store_override=None, p
         await store.ping(); await ensure_indexes(store); await seed_system_agents(store)
         if provider_override is not None: provider=provider_override
         elif cfg.ai_provider=="mock": provider=MockProvider()
-        elif cfg.ai_provider=="gemini": provider=GeminiProvider(_required_key(cfg.gemini_api_key,"gemini","GEMINI_API_KEY"),cfg.gemini_model,cfg.gemini_judge_model,fallback_model=cfg.gemini_fallback_model)
+        elif cfg.ai_provider=="gemini": provider=GeminiProvider(_required_key(cfg.gemini_api_key,"gemini","GEMINI_API_KEY"),cfg.gemini_model,cfg.gemini_judge_model,fallback_model=cfg.gemini_fallback_model,max_concurrency=cfg.gemini_max_concurrency)
         else: provider=OpenAIProvider(_required_key(cfg.openai_api_key,"openai","OPENAI_API_KEY"),cfg.openai_model,cfg.openai_judge_model)
         app.state.store=store; app.state.settings=cfg; app.state.provider=provider
         app.state.limiter=ProcessRateLimiter(); app.state.tasks=set()

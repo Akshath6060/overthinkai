@@ -81,3 +81,10 @@ async def test_gemini_provider_fails_over_immediately_for_missing_model(monkeypa
     assert output.analysis=="Fallback answer."
     assert len(calls)==2
     await client.aclose()
+
+
+async def test_gemini_provider_reads_google_retry_info():
+    response=httpx.Response(429,json={
+        "error":{"details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"20.75s"}]}
+    })
+    assert GeminiProvider._retry_delay(response,0)==20.75

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import re
 from typing import TypeVar
 
 import httpx
@@ -39,12 +40,13 @@ def _response_schema(schema: type[BaseModel]) -> dict:
 class GeminiProvider(AIProvider):
     """Gemini Generate Content implementation with validated structured outputs."""
 
-    def __init__(self, api_key: str, model: str, judge_model: str, client: httpx.AsyncClient | None = None, fallback_model: str = ""):
+    def __init__(self, api_key: str, model: str, judge_model: str, client: httpx.AsyncClient | None = None, fallback_model: str = "", max_concurrency: int = 1):
         self.api_key = api_key
         self.model = model
         self.judge_model = judge_model
         self.fallback_model = fallback_model.strip()
         self.client = client or httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0))
+        self._request_slots = asyncio.Semaphore(max_concurrency)
 
     @staticmethod
     def _retry_delay(response: httpx.Response | None, attempt: int) -> float:
@@ -56,10 +58,25 @@ class GeminiProvider(AIProvider):
                     return min(30.0, max(0.0, float(retry_after)))
                 except ValueError:
                     pass
+            try:
+                details = response.json().get("error", {}).get("details", [])
+                for detail in details:
+                    retry_delay = detail.get("retryDelay")
+                    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)s", str(retry_delay or ""))
+                    if match:
+                        return min(60.0, max(0.0, float(match.group(1))))
+            except (AttributeError, TypeError, ValueError):
+                pass
         base = min(8.0, 2 ** attempt)
         return base + random.uniform(0, base * 0.25)
 
     async def _structured(self, model: str, system: str, payload: dict, schema: type[OutputT]) -> tuple[OutputT, dict]:
+        # One API key is shared by every analyst and every active run. Keep
+        # retries inside the gate so a quota response cannot become a request storm.
+        async with self._request_slots:
+            return await self._structured_request(model, system, payload, schema)
+
+    async def _structured_request(self, model: str, system: str, payload: dict, schema: type[OutputT]) -> tuple[OutputT, dict]:
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": json.dumps(payload, ensure_ascii=False)}]}],

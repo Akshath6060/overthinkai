@@ -188,9 +188,10 @@ Deploy it on Render using [render.yaml](backend/render.yaml), or use the same co
 | `MONGODB_DATABASE` | Yes | Backend | Database name | `overthinker` |
 | `AI_PROVIDER` | Yes | Backend | Active provider | `gemini` or `openai` |
 | `GEMINI_API_KEY` | Conditional | Backend | Required for Gemini | Secret value |
-| `GEMINI_MODEL` | Gemini | Backend | Primary analyst model | `gemini-3.6-flash` |
-| `GEMINI_JUDGE_MODEL` | Gemini | Backend | Primary verdict model | `gemini-3.6-flash` |
-| `GEMINI_FALLBACK_MODEL` | Recommended | Backend | Capacity/retirement fallback model | `gemini-3.5-flash` |
+| `GEMINI_MODEL` | Gemini | Backend | Primary analyst model | `gemini-3.5-flash-lite` |
+| `GEMINI_JUDGE_MODEL` | Gemini | Backend | Primary verdict model | `gemini-3.5-flash` |
+| `GEMINI_FALLBACK_MODEL` | Recommended | Backend | Capacity/retirement fallback model | `gemini-3.1-flash-lite` |
+| `GEMINI_MAX_CONCURRENCY` | Recommended | Backend | Maximum simultaneous Gemini requests per API key | `1` |
 | `OPENAI_API_KEY` | Conditional | Backend | Required for OpenAI | Secret value |
 | `SESSION_SECRET` | Production | Backend | At least 32 random characters | Random secret |
 | `FRONTEND_URL` | Production | Backend | Primary allowed HTTPS origin | `https://app.example.com` |
