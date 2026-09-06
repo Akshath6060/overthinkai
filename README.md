@@ -1,16 +1,16 @@
 # Overthinker AI
 
-Overthinker AI is a playful decision-analysis interface that sends an everyday question through a deliberately overqualified council of fictional experts. The current repository contains the responsive frontend prototype; a real backend and AI integration are planned next.
+Overthinker AI is a playful decision-analysis interface that sends an everyday question through a deliberately overqualified council of fictional experts. The repository now includes the responsive frontend prototype and a production-oriented FastAPI backend.
 
 ## Current status
 
 - React 18 frontend powered by Vite
 - Responsive views for decisions, analysis, history, analytics, experts, and settings
-- Demo authentication and analysis sequences
-- Mock data and browser-local state only
-- No backend, database, or real authentication yet
+- FastAPI + MongoDB backend in `backend/`
+- Real server-side guest sessions, decision runs, credits, agents, history, analytics, export, and SSE
+- OpenAI provider abstraction plus an explicit deterministic local/test provider
 
-> The current login and verdict flows are simulations. Do not treat them as security or production AI behavior.
+> The current React prototype still needs to be connected using [BACKEND_INTEGRATION.md](BACKEND_INTEGRATION.md). Its existing local simulation must not be treated as authentication.
 
 ## Repository structure
 

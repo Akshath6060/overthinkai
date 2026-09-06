@@ -34,6 +34,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+.venv*/
 venv/
 
 # Editors and operating systems
@@ -50,4 +51,3 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
-
