@@ -183,7 +183,7 @@ async def full_decision(store, decision: dict):
     public_agents=[]
     for a in agents:
         public_agents.append({k:v for k,v in a.items() if k not in {"_id","userId","instructions"}})
-    return {"id":decision["id"],"run":{k:v for k,v in run.items() if k in {"id","status","progress","createdAt","startedAt","completedAt","partialFailure"}},"question":decision["question"],"category":decision["category"],"severity":decision["severity"],"saved":decision["saved"],"agents":public_agents,"finalVerdict":run.get("finalVerdict"),"usage":run.get("usage"),"metrics":run.get("metrics")}
+    return {"id":decision["id"],"run":{k:v for k,v in run.items() if k in {"id","status","progress","createdAt","startedAt","completedAt","partialFailure","error"}},"question":decision["question"],"category":decision["category"],"severity":decision["severity"],"saved":decision["saved"],"agents":public_agents,"finalVerdict":run.get("finalVerdict"),"usage":run.get("usage"),"metrics":run.get("metrics")}
 
 
 async def delete_decision_data(store, decision: dict):

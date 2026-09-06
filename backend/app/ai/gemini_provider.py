@@ -1,5 +1,6 @@
 import asyncio
 import json
+import random
 from typing import TypeVar
 
 import httpx
@@ -11,6 +12,9 @@ from app.schemas.ai import AnalystOutput, JudgeOutput
 from .provider import AIProvider
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
+
+_MAX_ATTEMPTS_PER_MODEL = 5
+_RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
 
 # Gemini's responseSchema is an OpenAPI 3.0 subset and rejects these JSON Schema keywords outright.
 _UNSUPPORTED_SCHEMA_KEYS = {"additionalProperties", "$schema", "$defs"}
@@ -42,6 +46,19 @@ class GeminiProvider(AIProvider):
         self.fallback_model = fallback_model.strip()
         self.client = client or httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0))
 
+    @staticmethod
+    def _retry_delay(response: httpx.Response | None, attempt: int) -> float:
+        """Use provider guidance when present, otherwise bounded exponential backoff with jitter."""
+        if response is not None:
+            retry_after = response.headers.get("retry-after")
+            if retry_after:
+                try:
+                    return min(30.0, max(0.0, float(retry_after)))
+                except ValueError:
+                    pass
+        base = min(8.0, 2 ** attempt)
+        return base + random.uniform(0, base * 0.25)
+
     async def _structured(self, model: str, system: str, payload: dict, schema: type[OutputT]) -> tuple[OutputT, dict]:
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
@@ -55,18 +72,22 @@ class GeminiProvider(AIProvider):
         models = [model]
         if self.fallback_model and self.fallback_model != model:
             models.append(self.fallback_model)
-        retryable_statuses = {404, 429, 500, 502, 503, 504}
         last_status = None
         for model_index, selected_model in enumerate(models):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{selected_model}:generateContent"
-            for attempt in range(3):
+            for attempt in range(_MAX_ATTEMPTS_PER_MODEL):
+                response = None
                 try:
                     response = await self.client.post(url, headers={"x-goog-api-key": self.api_key}, json=body)
                     last_status = response.status_code
-                    if response.status_code in retryable_statuses:
-                        if attempt < 2:
-                            await asyncio.sleep(0.25 * (2 ** attempt))
+                    if response.status_code in _RETRYABLE_STATUSES:
+                        if attempt + 1 < _MAX_ATTEMPTS_PER_MODEL:
+                            await asyncio.sleep(self._retry_delay(response, attempt))
                             continue
+                        break
+                    # A missing/retired model should fail over immediately; retrying the
+                    # same invalid endpoint only makes the user wait longer.
+                    if response.status_code == 404:
                         break
                     response.raise_for_status()
                     raw = response.json()
@@ -80,14 +101,25 @@ class GeminiProvider(AIProvider):
                         "currency": "INR",
                     }
                 except (httpx.TimeoutException, httpx.NetworkError):
-                    if attempt < 2:
-                        await asyncio.sleep(0.25 * (2 ** attempt))
+                    if attempt + 1 < _MAX_ATTEMPTS_PER_MODEL:
+                        await asyncio.sleep(self._retry_delay(None, attempt))
                         continue
                     break
                 except httpx.HTTPStatusError as exc:
                     raise AppError(502, "AI_PROVIDER_ERROR", "The Gemini council is temporarily unavailable.", {"providerStatus": exc.response.status_code}) from exc
                 except (KeyError, IndexError, ValueError) as exc:
-                    raise AppError(502, "AI_PROVIDER_ERROR", "The Gemini council is temporarily unavailable.") from exc
+                    # Empty candidates and occasionally malformed structured output can
+                    # be transient. Give the model another generation, then fail over.
+                    if attempt + 1 < _MAX_ATTEMPTS_PER_MODEL:
+                        await asyncio.sleep(self._retry_delay(response, attempt))
+                        continue
+                    log_event(
+                        "ai.provider_invalid_response",
+                        provider="gemini",
+                        model=selected_model,
+                        errorType=type(exc).__name__,
+                    )
+                    break
             if model_index + 1 < len(models):
                 log_event("ai.provider_fallback", provider="gemini", primaryModel=model, fallbackModel=models[model_index + 1], providerStatus=last_status)
         raise AppError(503, "AI_PROVIDER_UNAVAILABLE", "The Gemini council is temporarily unavailable.", {"providerStatus": last_status})

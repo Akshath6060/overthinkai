@@ -37,6 +37,46 @@ async def test_gemini_provider_falls_back_after_retryable_capacity_errors(monkey
     provider=GeminiProvider("test-key","gemini-primary","gemini-primary",client,fallback_model="gemini-fallback")
     output,_=await provider.analyze("Should I retry?",{"name":"Risk Analyst","personality":"Cautious","instructions":"Assess risks."},"NORMAL","Dry")
     assert output.analysis=="Fallback answer."
-    assert len([url for url in calls if "gemini-primary" in url])==3
+    assert len([url for url in calls if "gemini-primary" in url])==5
     assert "gemini-fallback" in calls[-1]
+    await client.aclose()
+
+
+async def test_gemini_provider_retries_invalid_structured_response(monkeypatch):
+    calls=[]
+    async def no_sleep(_): return None
+    monkeypatch.setattr("app.ai.gemini_provider.asyncio.sleep",no_sleep)
+    def handler(request: httpx.Request):
+        calls.append(str(request.url))
+        if len(calls)==1:
+            return httpx.Response(200,json={"candidates":[]})
+        return httpx.Response(200,json={
+            "candidates":[{"content":{"parts":[{"text":json.dumps({"analysis":"Recovered answer.","verdict":"PROCEED","confidence":78})}]}}],
+            "usageMetadata":{},
+        })
+    client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider=GeminiProvider("test-key","gemini-primary","gemini-primary",client)
+    output,_=await provider.analyze("Should I retry?",{"name":"Risk Analyst","personality":"Cautious","instructions":"Assess risks."},"NORMAL","Dry")
+    assert output.analysis=="Recovered answer."
+    assert len(calls)==2
+    await client.aclose()
+
+
+async def test_gemini_provider_fails_over_immediately_for_missing_model(monkeypatch):
+    calls=[]
+    async def no_sleep(_): return None
+    monkeypatch.setattr("app.ai.gemini_provider.asyncio.sleep",no_sleep)
+    def handler(request: httpx.Request):
+        calls.append(str(request.url))
+        if "gemini-missing" in str(request.url):
+            return httpx.Response(404,json={"error":{"status":"NOT_FOUND"}})
+        return httpx.Response(200,json={
+            "candidates":[{"content":{"parts":[{"text":json.dumps({"analysis":"Fallback answer.","verdict":"PROCEED","confidence":75})}]}}],
+            "usageMetadata":{},
+        })
+    client=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    provider=GeminiProvider("test-key","gemini-missing","gemini-missing",client,fallback_model="gemini-fallback")
+    output,_=await provider.analyze("Should I retry?",{"name":"Risk Analyst","personality":"Cautious","instructions":"Assess risks."},"NORMAL","Dry")
+    assert output.analysis=="Fallback answer."
+    assert len(calls)==2
     await client.aclose()

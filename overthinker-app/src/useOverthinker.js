@@ -24,6 +24,17 @@ function normalizeAgent(agent, fallback = {}) {
   };
 }
 
+function normalizeRunSnapshot(agent) {
+  const output = agent.output || {};
+  return {
+    ...agent,
+    analysis: output.analysis || output.explanation || agent.analysis,
+    verdict: output.verdict || output.headline || agent.verdict,
+    conf: agent.confidence ?? agent.conf ?? 0,
+    time: agent.durationMs == null ? agent.time : `${(agent.durationMs / 1000).toFixed(1)}s`,
+  };
+}
+
 export function useOverthinker(props = {}) {
   const accent = props.accent || '#8B5CF6';
 
@@ -199,13 +210,22 @@ export function useOverthinker(props = {}) {
       setCat(detail.category || 'Other');
       setLevelState(detail.severity || 'SEVERE');
       setRunId(detail.run?.id || null);
-      setRunAgents(detail.agents || []);
+      setRunAgents((detail.agents || []).map(normalizeRunSnapshot));
       setRunProgress(detail.run?.progress || 100);
       setFinalVerdict(detail.finalVerdict || null);
       setRunUsage(detail.usage || null);
       setRunMetrics(detail.metrics || null);
       setOverall(detail.finalVerdict?.confidence || 0);
-      setPhase(detail.run?.status === 'completed' ? 'done' : 'running');
+      if (detail.run?.status === 'completed') {
+        setPhase('done');
+      } else if (detail.run?.status === 'failed' || detail.run?.status === 'cancelled') {
+        setApiError(detail.run?.error?.message || (detail.run.status === 'failed'
+          ? 'The council failed to reach a verdict.'
+          : 'The council session was cancelled.'));
+        setPhase('input');
+      } else {
+        setPhase('running');
+      }
     } catch (error) {
       setDecisionErrorStatus(error.status === 403 ? 403 : error.status === 404 ? 404 : 503);
     } finally {
@@ -362,9 +382,37 @@ export function useOverthinker(props = {}) {
       };
       stream.addEventListener('run.failed', fail);
       stream.addEventListener('run.cancelled', fail);
-      stream.onerror = () => {
-        if (!navigator.onLine) setApiError('Connection lost. The council will reconnect when you are online.');
-        else api('/me').catch(() => null);
+      stream.onerror = async () => {
+        if (!navigator.onLine) {
+          setApiError('Connection lost. The council will reconnect when you are online.');
+          return;
+        }
+        // EventSource reconnects by itself, but reconcile against persisted state
+        // in case the terminal event was lost while a proxy or backend restarted.
+        try {
+          const current = await api(`/runs/${encodeURIComponent(created.runId)}`);
+          setRunAgents((current.agents || []).map(normalizeRunSnapshot));
+          setRunProgress(current.progress || 0);
+          if (current.status === 'completed' && current.finalVerdict) {
+            clearInterval(msgTimer.current);
+            setRunUsage(current.usage);
+            setRunMetrics(current.metrics);
+            setFinalVerdict(current.finalVerdict);
+            setOverall(current.finalVerdict.confidence);
+            setPhase('done');
+            stream.close();
+          } else if (current.status === 'failed' || current.status === 'cancelled') {
+            clearInterval(msgTimer.current);
+            setApiError(current.error?.message || (current.status === 'failed'
+              ? 'The council failed to reach a verdict.'
+              : 'The council session was cancelled.'));
+            setPhase('input');
+            stream.close();
+          }
+        } catch (_) {
+          // Keep EventSource's native reconnection active; a later attempt can
+          // recover both missed progress and the terminal event by event ID.
+        }
       };
     } catch (error) {
       clearInterval(msgTimer.current);

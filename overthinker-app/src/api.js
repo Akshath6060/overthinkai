@@ -26,40 +26,61 @@ function emitAuthExpired() {
 }
 
 export async function api(path, init = {}) {
-  const { timeout = 15000, signal, ...requestInit } = init;
+  const { timeout = 15000, signal, retries, ...requestInit } = init;
+  const method = (requestInit.method || 'GET').toUpperCase();
+  const maxRetries = retries ?? (method === 'GET' ? 2 : 0);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeout);
   const abort = () => controller.abort(signal.reason);
   signal?.addEventListener('abort', abort, { once: true });
 
   try {
-    const response = await fetch(`${API_URL}/api/v1${path}`, {
-      ...requestInit,
-      signal: controller.signal,
-      credentials: 'include',
-      headers: {
-        Accept: 'application/json',
-        ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
-        ...requestInit.headers,
-      },
-    });
-    const contentType = response.headers.get('content-type') || '';
-    const payload = contentType.includes('application/json') ? await response.json().catch(() => null) : null;
-    if (!response.ok) {
-      const retryAfter = response.headers.get('retry-after');
-      let safeMessage = messages[response.status] || payload?.error?.message
-        || (response.status >= 500 ? 'Our overthinking engine seems to be taking a break.' : `Request failed (${response.status}).`);
-      if (response.status === 429 && retryAfter) safeMessage += ` Try again in ${retryAfter} seconds.`;
-      if (response.status === 401 && !path.startsWith('/auth/')) emitAuthExpired();
-      throw new ApiError({
-        message: safeMessage,
-        status: response.status,
-        code: payload?.error?.code || `HTTP_${response.status}`,
-        requestId: payload?.error?.requestId || response.headers.get('x-request-id'),
-        retryAfter: retryAfter ? Number(retryAfter) || retryAfter : null,
-      });
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        const response = await fetch(`${API_URL}/api/v1${path}`, {
+          ...requestInit,
+          signal: controller.signal,
+          credentials: 'include',
+          headers: {
+            Accept: 'application/json',
+            ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
+            ...requestInit.headers,
+          },
+        });
+        const contentType = response.headers.get('content-type') || '';
+        const payload = contentType.includes('application/json') ? await response.json().catch(() => null) : null;
+        if (!response.ok) {
+          const retryAfter = response.headers.get('retry-after');
+          if ([502, 503, 504].includes(response.status) && attempt < maxRetries) {
+            const providerDelay = retryAfter === null ? NaN : Number(retryAfter);
+            const delay = Number.isFinite(providerDelay) && providerDelay >= 0
+              ? Math.min(providerDelay * 1000, 3000)
+              : 500 * (2 ** attempt);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          let safeMessage = messages[response.status] || payload?.error?.message
+            || (response.status >= 500 ? 'Our overthinking engine seems to be taking a break.' : `Request failed (${response.status}).`);
+          if (response.status === 429 && retryAfter) safeMessage += ` Try again in ${retryAfter} seconds.`;
+          if (response.status === 401 && !path.startsWith('/auth/')) emitAuthExpired();
+          throw new ApiError({
+            message: safeMessage,
+            status: response.status,
+            code: payload?.error?.code || `HTTP_${response.status}`,
+            requestId: payload?.error?.requestId || response.headers.get('x-request-id'),
+            retryAfter: retryAfter ? Number(retryAfter) || retryAfter : null,
+          });
+        }
+        return response.status === 204 ? null : payload;
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        if (!controller.signal.aborted && attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 500 * (2 ** attempt)));
+          continue;
+        }
+        throw error;
+      }
     }
-    return response.status === 204 ? null : payload;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     const timedOut = controller.signal.aborted && !signal?.aborted;
