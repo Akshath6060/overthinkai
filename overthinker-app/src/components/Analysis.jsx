@@ -1,6 +1,5 @@
 import React from 'react';
 import { css, Sx } from '../lib/sx.jsx';
-import { metricsDone } from '../data.js';
 
 export default function Analysis(v) {
   return (
@@ -15,7 +14,7 @@ export default function Analysis(v) {
               <div style={css('display:flex;flex-wrap:wrap;gap:7px;margin-top:13px')}>
                 <span style={css('font:700 10px Inter,sans-serif;color:#1A1720;border:2px solid #2B2336;background:#FFD84D;padding:3px 9px;border-radius:999px')}>{v.levelUpper} MODE</span>
                 <span style={css('font:700 10px Inter,sans-serif;color:#1A1720;border:2px solid #2B2336;background:#4CC9F0;padding:3px 9px;border-radius:999px')}>{v.catUpper}</span>
-                <span style={css('font:700 10px Inter,sans-serif;color:#1A1720;border:2px solid #2B2336;background:#FFF8E7;padding:3px 9px;border-radius:999px')}>6 EXPERTS BOTHERED</span>
+                <span style={css('font:700 10px Inter,sans-serif;color:#1A1720;border:2px solid #2B2336;background:#FFF8E7;padding:3px 9px;border-radius:999px')}>{v.expertCount} EXPERTS BOTHERED</span>
               </div>
             </div>
             <div style={css(`display:flex;align-items:center;gap:9px;padding:8px 13px;border-radius:999px;border:3px solid #2B2336;background:${v.statusBg};box-shadow:3px 3px 0 #2B2336`)}>
@@ -108,8 +107,8 @@ export default function Analysis(v) {
               <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:14px')}>
                 <span style={css('font-family:Bangers,cursive;font-size:clamp(17px,2.5vw,22px);letter-spacing:1.2px;color:#2B2336;background:#FFF8E7;border:3px solid #2B2336;border-radius:999px;padding:3px 14px;box-shadow:3px 3px 0 #2B2336')}>FINAL VERDICT</span>
               </div>
-              <div style={css('font-family:Bangers,cursive;font-size:clamp(44px,10vw,104px);line-height:.88;letter-spacing:2px;color:#2B2336;text-shadow:4px 4px 0 #FFF8E7')}>JUST.<br />ORDER.<br />THE.<br /><span style={css('color:#8B5CF6;text-shadow:4px 4px 0 #FFF8E7')}>BIRYANI.</span></div>
-              <p style={css('margin:20px 0 0;max-width:600px;font-size:14px;line-height:1.6;color:#3A3244;font-weight:600;text-wrap:pretty')}>Six AI agents were consulted for absolutely no reason. They have concluded what you already knew before opening this application.</p>
+              <div style={css('font-family:Bangers,cursive;font-size:clamp(38px,7vw,78px);line-height:.94;letter-spacing:2px;color:#2B2336;text-shadow:4px 4px 0 #FFF8E7;text-wrap:balance')}>{v.finalHeadline}</div>
+              <p style={css('margin:20px 0 0;max-width:700px;font-size:14px;line-height:1.6;color:#3A3244;font-weight:600;text-wrap:pretty')}>{v.finalExplanation}</p>
               <div style={css('display:flex;flex-wrap:wrap;gap:14px;margin-top:24px')}>
                 <div style={css('background:#FFF;border:3px solid #2B2336;border-radius:16px;padding:14px 18px;box-shadow:4px 4px 0 #2B2336;min-width:150px')}>
                   <div style={css('font:700 9.5px Inter,sans-serif;letter-spacing:.12em;color:#6F687A;margin-bottom:6px')}>CONFIDENCE (UNEARNED)</div>
@@ -117,11 +116,11 @@ export default function Analysis(v) {
                 </div>
                 <div style={css('background:#B7F34A;border:3px solid #2B2336;border-radius:16px;padding:14px 18px;box-shadow:4px 4px 0 #2B2336;min-width:160px')}>
                   <div style={css('font:700 9.5px Inter,sans-serif;letter-spacing:.12em;color:#3A3244;margin-bottom:8px')}>THE COUNCIL SAYS</div>
-                  <div style={css('font-size:13px;font-weight:700;line-height:1.5;color:#1A1720')}>5 agents approve<br /><span style={css('font-weight:600;color:#3A3244')}>1 agent disagrees (recreationally)</span></div>
+                  <div style={css('font-size:13px;font-weight:700;line-height:1.5;color:#1A1720')}>{v.approveCount} agents approve<br /><span style={css('font-weight:600;color:#3A3244')}>{v.disapproveCount} agents disagree</span></div>
                 </div>
                 <div style={css('background:#FFF;border:3px dashed #2B2336;border-radius:16px;padding:14px 18px;min-width:160px')}>
                   <div style={css('font:700 9.5px Inter,sans-serif;letter-spacing:.12em;color:#6F687A;margin-bottom:8px')}>LONE HATER</div>
-                  <div style={css('font-size:13px;font-weight:700;line-height:1.5')}>😈 Devil’s Advocate<br /><span style={css('color:#FF4D4D')}>ABSOLUTELY NOT</span></div>
+                  <div style={css('font-size:13px;font-weight:700;line-height:1.5')}>😈 {v.dissentingNames}</div>
                 </div>
               </div>
               <div style={css('display:flex;flex-wrap:wrap;gap:10px;margin-top:24px')}>
@@ -141,7 +140,7 @@ export default function Analysis(v) {
             </div>
 
             <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px')}>
-              {metricsDone.map((m, i) => (
+              {v.metricsCards.map((m, i) => (
                 <div key={i} style={css(`background:#FFF;border:3px solid #2B2336;border-radius:14px;padding:14px;box-shadow:4px 4px 0 #2B2336;transform:${m.tf}`)}>
                   <div style={css('font:700 9.5px Inter,sans-serif;letter-spacing:.1em;color:#6F687A;margin-bottom:9px')}>{m.label}</div>
                   <div style={css(`font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.8px;color:${m.color}`)}>{m.value}</div>
@@ -189,7 +188,7 @@ export default function Analysis(v) {
 
         <div style={css('background:#FF4FA3;border:3px solid #2B2336;border-radius:18px;padding:15px;box-shadow:4px 4px 0 #2B2336;transform:rotate(-1deg)')}>
           <div style={css('font-family:Bangers,cursive;font-size:16px;letter-spacing:.6px;color:#FFF;margin-bottom:8px')}>DID YOU KNOW?</div>
-          <div style={css('font-size:12.5px;line-height:1.6;color:#FFF;font-weight:600')}>You could have eaten the biryani in the time it took to read this panel. The agents are aware. They do not care.</div>
+          <div style={css('font-size:12.5px;line-height:1.6;color:#FFF;font-weight:600')}>You could have made this decision yourself in the time it took to read this panel. The agents are aware. They do not care.</div>
         </div>
       </aside>
     </div>

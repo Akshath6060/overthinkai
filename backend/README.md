@@ -1,6 +1,6 @@
 # Overthinker AI API
 
-Production-oriented FastAPI backend for Overthinker AI / ULP 3.0. It uses MongoDB Atlas, server-side guest sessions, OpenAI structured outputs, persisted SSE events, immutable agent snapshots, and an append-only internal credit ledger.
+Production-oriented FastAPI backend for Overthinker AI / ULP 3.0. It uses MongoDB Atlas, server-side guest sessions, Gemini or OpenAI structured outputs, persisted SSE events, immutable agent snapshots, and an append-only internal credit ledger.
 
 ## Local development
 
@@ -15,7 +15,7 @@ cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The template deliberately selects `MONGODB_URI=memory://` and `AI_PROVIDER=mock` for a zero-credential local demo. Neither is permitted when `APP_ENV=production`. Set a MongoDB URI and `AI_PROVIDER=openai` to exercise production integrations.
+The template selects `MONGODB_URI=memory://` and `AI_PROVIDER=gemini`. Add `GEMINI_API_KEY` locally to use real Gemini answers. Set `AI_PROVIDER=mock` explicitly for a zero-credential demo; mock mode and in-memory storage are not permitted when `APP_ENV=production`.
 
 Run tests:
 
@@ -28,7 +28,7 @@ Health and API documentation are at `/health`, `/api/v1/health`, `/docs`, `/redo
 
 ## Configuration
 
-Required production variables: `APP_ENV`, `MONGODB_URI`, `MONGODB_DATABASE`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_JUDGE_MODEL`, `SESSION_SECRET`, `SESSION_EXPIRE_DAYS`, `FRONTEND_URL`, `ALLOWED_ORIGINS`, `DEFAULT_CREDIT_ALLOWANCE`, `AI_PROVIDER`, `LOG_LEVEL`, `COOKIE_SECURE`, `COOKIE_SAMESITE`, and `DOCS_ENABLED`.
+Required production variables: `APP_ENV`, `MONGODB_URI`, `MONGODB_DATABASE`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_JUDGE_MODEL`, `SESSION_SECRET`, `SESSION_EXPIRE_DAYS`, `FRONTEND_URL`, `ALLOWED_ORIGINS`, `DEFAULT_CREDIT_ALLOWANCE`, `AI_PROVIDER`, `LOG_LEVEL`, `COOKIE_SECURE`, `COOKIE_SAMESITE`, and `DOCS_ENABLED`. The `OPENAI_*` variables remain available when `AI_PROVIDER=openai`.
 
 For Vercel → Render, set `COOKIE_SECURE=true` and `COOKIE_SAMESITE=none`. The API validates production mutation origins against the configured CORS allowlist. Cookies are HttpOnly and never returned in JSON. A same-site custom API domain is preferable when available.
 
@@ -49,7 +49,7 @@ Collections: `users`, `sessions`, `user_settings`, `agents`, `user_agent_prefere
 
 ## AI execution
 
-Routes depend only on the `AIProvider` interface. `OpenAIProvider` owns all SDK calls and validates structured analyst/judge outputs with Pydantic. Analysts run concurrently; the judge receives only successful, user-visible outputs. One analyst may fail without aborting the council; all-analyst or judge failure fails the run. OpenAI transient retries are bounded at two. No chain-of-thought, server prompts, provider keys, or internal instructions are exposed.
+Routes depend only on the `AIProvider` interface. `GeminiProvider` uses Gemini's Generate Content endpoint with JSON Schema and validates every analyst/judge response with Pydantic; `OpenAIProvider` remains available. Analysts run concurrently and the judge receives only successful, user-visible outputs. One analyst may fail without aborting the council; all-analyst or judge failure fails the run. Provider retries are bounded. No chain-of-thought, server prompts, provider keys, or internal instructions are exposed.
 
 In-process jobs are claimed idempotently and persist each state transition. A Render restart can interrupt them; the worker boundary is intentionally isolated so it can later become FastAPI → Redis → worker without changing the API.
 
@@ -95,4 +95,3 @@ One web worker is recommended for the in-process MVP queue and rate limiter. The
 - `GET /api/v1/analytics`
 
 All validation and application errors use `{ "error": { "code", "message", "requestId", "details" } }` and responses include `X-Request-ID`.
-

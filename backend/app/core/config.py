@@ -15,12 +15,15 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
     openai_judge_model: str = "gpt-4.1-mini"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_judge_model: str = "gemini-2.5-flash"
     session_secret: str = "development-only-change-me-please-32-chars"
     session_expire_days: int = Field(default=30, ge=1, le=365)
     frontend_url: str = "http://localhost:5173"
     allowed_origins: str = "http://localhost:5173"
     default_credit_allowance: int = Field(default=1000, ge=0)
-    ai_provider: Literal["openai", "mock"] = "mock"
+    ai_provider: Literal["openai", "gemini", "mock"] = "mock"
     log_level: str = "INFO"
     cookie_secure: bool = False
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
@@ -49,4 +52,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

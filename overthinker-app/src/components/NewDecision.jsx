@@ -17,7 +17,7 @@ export default function NewDecision(v) {
           <span style={css('font-family:Bangers,cursive;font-size:17px;letter-spacing:.6px;color:#2B2336')}>DROP YOUR LIFE-CHANGING PROBLEM HERE</span>
           <span style={css('transform:rotate(2deg);font:700 9.5px Inter,sans-serif;letter-spacing:.08em;padding:3px 8px;border:2px solid #2B2336;border-radius:999px;background:#FFD84D')}>EXTREMELY IMPORTANT</span>
         </div>
-        <textarea value={v.q} onChange={v.onQ} rows="3" placeholder="Should I order biryani?" style={css("display:block;width:100%;border:0;outline:none;resize:none;background:transparent;color:#1A1720;font-family:'Space Grotesk',sans-serif;font-size:19px;line-height:1.45;font-weight:600;padding:12px 18px 6px;letter-spacing:-.3px")}></textarea>
+        <textarea value={v.q} onChange={v.onQ} rows="3" placeholder="Should I finally make this decision?" style={css("display:block;width:100%;border:0;outline:none;resize:none;background:transparent;color:#1A1720;font-family:'Space Grotesk',sans-serif;font-size:19px;line-height:1.45;font-weight:600;padding:12px 18px 6px;letter-spacing:-.3px")}></textarea>
         <div style={css('padding:0 18px 12px;font-size:11.5px;color:#A79FB2;font-weight:600')}>Please ensure this decision is unnecessarily complicated.</div>
         <div style={css('display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 16px')}>
           {v.cats.map(c => (
@@ -56,6 +56,7 @@ export default function NewDecision(v) {
             active="transform:translate(3px,3px);box-shadow:1px 1px 0 #2B2336">
             <span style={css('font-size:26px;line-height:1')}>🧠</span> BEGIN OVERTHINKING <span style={css('opacity:.85')}>→</span>
           </Sx>
+          {v.apiError && <div role="alert" style={css('margin-top:12px;padding:10px 12px;border:2px solid #2B2336;border-radius:10px;background:#FFB3B3;color:#1A1720;font-size:12.5px;font-weight:700')}>{v.apiError}</div>}
           <div style={css('text-align:center;font-size:11.5px;color:#6F687A;font-weight:600;margin-top:10px')}>Average unnecessary analysis time: 12 seconds. Yours may be worse.</div>
         </div>
       </div>

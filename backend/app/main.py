@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from app.ai.mock_provider import MockProvider
 from app.ai.openai_provider import OpenAIProvider
+from app.ai.gemini_provider import GeminiProvider
 from app.core.config import Settings, get_settings
 from app.core.errors import AppError
 from app.core.ids import new_id
@@ -40,7 +41,8 @@ def create_app(settings_override: Settings | None = None, store_override=None, p
         await store.ping(); await ensure_indexes(store); await seed_system_agents(store)
         if provider_override is not None: provider=provider_override
         elif cfg.ai_provider=="mock": provider=MockProvider()
-        elif cfg.openai_api_key: provider=OpenAIProvider(cfg.openai_api_key,cfg.openai_model,cfg.openai_judge_model)
+        elif cfg.ai_provider=="gemini" and cfg.gemini_api_key: provider=GeminiProvider(cfg.gemini_api_key,cfg.gemini_model,cfg.gemini_judge_model)
+        elif cfg.ai_provider=="openai" and cfg.openai_api_key: provider=OpenAIProvider(cfg.openai_api_key,cfg.openai_model,cfg.openai_judge_model)
         else: provider=None
         app.state.store=store; app.state.settings=cfg; app.state.provider=provider
         app.state.limiter=ProcessRateLimiter(); app.state.tasks=set()

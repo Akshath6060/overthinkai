@@ -4,18 +4,17 @@ import {
   quizQuestionDefs, navDefs, pageTitles, catColors, levelDefs, levelHints,
   exampleLabels, exColors, lvlBg, lvlEmoji, humorNotes, toggleDefs
 } from './data.js';
+import { API_URL, api } from './api.js';
 
 const DARK = '#2B2336';
 const SHADOW = '3px 3px 0 ' + DARK;
 
-const readAuth = () => {
-  try { return localStorage.getItem('ot_auth') === '1'; } catch (e) { return false; }
-};
+const agentIds = ['agent_finance', 'agent_risk', 'agent_emotion', 'agent_practical', 'agent_devil', 'agent_judge'];
 
 export function useOverthinker(props = {}) {
   const accent = props.accent || '#8B5CF6';
 
-  const [authed, setAuthed] = useState(readAuth);
+  const [authed, setAuthed] = useState(false);
   const [loginPhase, setLoginPhase] = useState('idle');
   const [loginStep, setLoginStep] = useState(-1);
   const [loginMsgIdx, setLoginMsgIdx] = useState(0);
@@ -32,6 +31,13 @@ export function useOverthinker(props = {}) {
   const [logs, setLogs] = useState([]);
   const [logOpen, setLogOpen] = useState(true);
   const [overall, setOverall] = useState(0);
+  const [runId, setRunId] = useState(null);
+  const [runAgents, setRunAgents] = useState([]);
+  const [runProgress, setRunProgress] = useState(0);
+  const [finalVerdict, setFinalVerdict] = useState(null);
+  const [runUsage, setRunUsage] = useState(null);
+  const [runMetrics, setRunMetrics] = useState(null);
+  const [apiError, setApiError] = useState('');
   const [msgIdx, setMsgIdx] = useState(0);
 
   const [hFilter, setHFilter] = useState('All');
@@ -45,26 +51,39 @@ export function useOverthinker(props = {}) {
   const timers = useRef([]);
   const msgTimer = useRef(null);
   const countTimer = useRef(null);
+  const streamRef = useRef(null);
 
   const clearAll = useCallback(() => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
     clearInterval(msgTimer.current);
     clearInterval(countTimer.current);
+    streamRef.current?.close();
+    streamRef.current = null;
   }, []);
 
   useEffect(() => clearAll, [clearAll]);
 
+  useEffect(() => {
+    api('/me').then(() => setAuthed(true)).catch(() => setAuthed(false));
+  }, []);
+
   const level = levelState || props.defaultLevel || 'SEVERE';
   const humor = humorState || props.humorLevel || 'Dry';
 
-  const enterApp = useCallback(() => {
+  const enterApp = useCallback(async () => {
     clearAll();
-    try { localStorage.setItem('ot_auth', '1'); } catch (e) {}
-    setAuthed(true);
-    setLoginPhase('idle');
-    setLoginStep(-1);
-    setQuizOpen(false);
+    try {
+      await api('/auth/guest', { method: 'POST' });
+      setAuthed(true);
+      setApiError('');
+      setLoginPhase('idle');
+      setLoginStep(-1);
+      setQuizOpen(false);
+    } catch (error) {
+      setApiError(error.message);
+      setLoginPhase('idle');
+    }
   }, [clearAll]);
 
   const startLogin = useCallback(() => {
@@ -85,8 +104,8 @@ export function useOverthinker(props = {}) {
     }, 620 * n + 500));
   }, [clearAll, enterApp]);
 
-  const logout = useCallback(() => {
-    try { localStorage.setItem('ot_auth', '0'); } catch (e) {}
+  const logout = useCallback(async () => {
+    await api('/auth/logout', { method: 'POST' }).catch(() => null);
     clearAll();
     setAuthed(false);
     setLogoutOpen(false);
@@ -96,33 +115,93 @@ export function useOverthinker(props = {}) {
     setPage('new');
   }, [clearAll]);
 
-  const begin = useCallback(() => {
+  const begin = useCallback(async () => {
     clearAll();
+    const submittedQuestion = q.trim();
+    if (submittedQuestion.length < 3) {
+      setApiError('Please enter at least three characters. The council needs something to overthink.');
+      return;
+    }
+    setApiError('');
     setPhase('running');
     setStep(0);
-    setLogs(logScript.slice(0, 2));
+    setLogs([]);
     setOverall(0);
+    setFinalVerdict(null);
+    setRunUsage(null);
+    setRunMetrics(null);
+    setRunProgress(0);
+    const selectedIndexes = order.filter(index => !disabled[index]);
+    const selectedAgentIds = selectedIndexes.map(index => agentIds[index]);
+    const initialAgents = selectedIndexes.map((index, position) => ({
+      ...agentDefs[index], id: agentIds[index], position, status: 'queued'
+    }));
+    setRunAgents(initialAgents);
     setMsgIdx(0);
     msgTimer.current = setInterval(() => setMsgIdx(i => (i + 1) % 8), 2200);
-    for (let i = 0; i < 6; i++) {
-      timers.current.push(setTimeout(() => {
-        setStep(i + 1);
-        setLogs(logScript.slice(0, Math.min(logScript.length, 3 + i)));
-      }, 1400 * (i + 1)));
-    }
-    timers.current.push(setTimeout(() => {
+    try {
+      const created = await api('/decisions', {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          question: submittedQuestion,
+          category: cat || 'Other',
+          severity: level,
+          humorLevel: humor,
+          providerMode: 'council',
+          agentIds: selectedAgentIds,
+          autoSave: toggles.autosave,
+        }),
+      });
+      setRunId(created.runId);
+      const stream = new EventSource(`${API_URL}${created.eventsUrl}`, { withCredentials: true });
+      streamRef.current = stream;
+      const listen = (type, handler) => stream.addEventListener(type, event => handler(JSON.parse(event.data)));
+      listen('run.started', () => setRunProgress(1));
+      listen('run.progress', event => setRunProgress(event.data.progress));
+      listen('agent.started', event => {
+        setStep(current => current + 1);
+        setRunAgents(current => current.map(agent => agent.id === event.data.agentId ? { ...agent, status: 'running' } : agent));
+      });
+      listen('activity.created', event => setLogs(current => [...current, {
+        t: new Date(event.createdAt).toLocaleTimeString([], { hour12: false }), msg: event.data.message, color: '#E9E2F5'
+      }]));
+      listen('agent.completed', event => {
+        const result = event.data;
+        setRunAgents(current => current.map(agent => agent.id === result.agentId ? {
+          ...agent, status: 'completed', analysis: result.analysis || result.explanation,
+          verdict: result.verdict || result.headline, conf: result.confidence,
+          time: `${((result.durationMs || 0) / 1000).toFixed(1)}s`
+        } : agent));
+      });
+      listen('agent.failed', event => setRunAgents(current => current.map(agent => agent.id === event.data.agentId ? { ...agent, status: 'failed' } : agent)));
+      listen('usage.updated', event => setRunUsage(event.data));
+      listen('run.completed', event => {
+        clearInterval(msgTimer.current);
+        setRunProgress(100);
+        setRunUsage(event.data.usage);
+        setRunMetrics(event.data.metrics);
+        setFinalVerdict(event.data.finalVerdict);
+        setOverall(event.data.finalVerdict.confidence);
+        setPhase('done');
+        stream.close();
+      });
+      const fail = event => {
+        let message = 'The council failed to reach a verdict.';
+        try { message = JSON.parse(event.data).data.message || message; } catch (_) {}
+        clearInterval(msgTimer.current);
+        setApiError(message);
+        setPhase('input');
+        stream.close();
+      };
+      stream.addEventListener('run.failed', fail);
+      stream.addEventListener('run.cancelled', fail);
+    } catch (error) {
       clearInterval(msgTimer.current);
-      setPhase('done');
-      setStep(6);
-      setLogs(logScript);
-      let v = 0;
-      countTimer.current = setInterval(() => {
-        v += 3;
-        if (v >= 94) { v = 94; clearInterval(countTimer.current); }
-        setOverall(v);
-      }, 24);
-    }, 1400 * 6 + 700));
-  }, [clearAll]);
+      setApiError(error.message);
+      setPhase('input');
+    }
+  }, [cat, clearAll, disabled, humor, level, order, q, toggles.autosave]);
 
   const reset = useCallback(() => {
     clearAll();
@@ -130,6 +209,13 @@ export function useOverthinker(props = {}) {
     setStep(-1);
     setLogs([]);
     setOverall(0);
+    setRunId(null);
+    setRunAgents([]);
+    setRunProgress(0);
+    setFinalVerdict(null);
+    setRunUsage(null);
+    setRunMetrics(null);
+    setApiError('');
   }, [clearAll]);
 
   const go = id => () => setPage(id);
@@ -160,11 +246,12 @@ export function useOverthinker(props = {}) {
     tf: i % 2 ? 'rotate(.7deg)' : 'rotate(-.7deg)', hov: exColors[i]
   }));
 
-  const question = (q || '').trim() || 'Should I order biryani?';
+  const question = (q || '').trim();
 
-  const agents = agentDefs.map((d, i) => {
-    const done = step > i || phase === 'done';
-    const thinking = step === i && phase === 'running';
+  const activeAgentDefs = runAgents.length ? runAgents : agentDefs.map((agent, index) => ({ ...agent, id: agentIds[index], status: 'queued' }));
+  const agents = activeAgentDefs.map((d, i) => {
+    const done = d.status === 'completed';
+    const thinking = d.status === 'running';
     return { ...d, done, pending: thinking,
       statusLabel: done ? 'DONE FOR SOME REASON' : thinking ? d.thinking : 'WAITING',
       stBg: done ? '#B7F34A' : thinking ? d.color : '#FFF8E7',
@@ -178,13 +265,13 @@ export function useOverthinker(props = {}) {
   const visibleAgents = agents.filter(a => a.done || a.pending);
 
   const pipeDefs = [{ emoji: '❓', label: 'Your Problem', color: '#FFF' }]
-    .concat(agentDefs.map(d => ({ emoji: d.emoji, label: d.name.replace(' Analyst', ''), color: d.color })))
+    .concat(activeAgentDefs.map(d => ({ emoji: d.emoji, label: d.name.replace(' Analyst', ''), color: d.color, status: d.status })))
     .concat([{ emoji: '🎉', label: 'Verdict', color: '#FFD84D' }]);
 
   const pipeline = pipeDefs.map((n, i) => {
     const st = i === 0 ? (phase === 'input' ? 'queued' : 'done')
-      : i === 7 ? (phase === 'done' ? 'done' : 'queued')
-      : (step > i - 1 || phase === 'done') ? 'done' : (step === i - 1 && phase === 'running') ? 'active' : 'queued';
+      : i === pipeDefs.length - 1 ? (phase === 'done' ? 'done' : 'queued')
+      : n.status === 'completed' ? 'done' : n.status === 'running' ? 'active' : 'queued';
     return { emoji: n.emoji, label: n.label, hasLine: i > 0,
       lineOp: st === 'queued' ? '.25' : '1',
       bg: st === 'queued' ? '#FFF' : n.color,
@@ -242,6 +329,7 @@ export function useOverthinker(props = {}) {
       anim: act ? 'ot-bob 1s ease-in-out infinite' : fin ? 'ot-pop .3s ease both' : 'none',
       dotAnim: act ? 'ot-blink .9s ease-in-out infinite' : 'none' };
   });
+  const enabledCount = 6 - Object.values(disabled).filter(Boolean).length;
 
   return {
     authed, needsAuth: !authed,
@@ -259,7 +347,7 @@ export function useOverthinker(props = {}) {
     doLogout: logout,
     accent,
     nav, pageTitle: pageTitles[page],
-    pageMeta: page === 'new' ? (done ? 'verdict delivered · 6 experts bothered' : running ? 'overthinking in progress' : 'idle · awaiting something trivial')
+    pageMeta: page === 'new' ? (done ? `verdict delivered · ${runAgents.length} experts bothered` : running ? 'overthinking in progress' : 'idle · awaiting something trivial')
       : page === 'history' ? '6 regrets on file'
       : page === 'analytics' ? 'last 7 days of hesitation'
       : page === 'lab' ? '6 experts · 1 weird draft' : 'nothing here will help',
@@ -269,25 +357,39 @@ export function useOverthinker(props = {}) {
     inAnalysis: page === 'new' && phase !== 'input',
     isRunning: running, isDone: done,
     q, onQ: e => setQ(e.target.value),
-    cats, levels, levelHint: levelHints[level], examples, begin, reset,
+    cats, levels, levelHint: `${enabledCount} experts · ${{ NORMAL: 'lower', SEVERE: 'standard', EXISTENTIAL: 'larger' }[level]} answer budget`, examples, begin, reset, apiError,
     goNew: go('new'),
-    question, runId: 'RUN-8F42C', levelUpper: level, catUpper: (cat || 'UNCLASSIFIED').toUpperCase(),
+    question, runId: runId || 'PENDING', levelUpper: level, catUpper: (cat || 'Other').toUpperCase(),
+    expertCount: runAgents.length || enabledCount,
     statusLabel: done ? 'OVERTHINKING COMPLETE' : 'OVERTHINKING IN PROGRESS',
     statusBg: done ? '#B7F34A' : '#FFD84D',
     statusAnim: done ? 'none' : 'ot-blink 1s ease-in-out infinite',
-    progressPct: done ? '100%' : Math.round(Math.max(0, step) / 6 * 100) + '%',
+    progressPct: `${done ? 100 : runProgress}%`,
     loadingMsg: loadingMsgs[msgIdx],
     pipeline, visibleAgents,
     logs, logOpen, logChevron: logOpen ? '⌄' : '›',
     toggleLog: () => setLogOpen(o => !o),
     telemetry: [
-      { k: 'Experts bothered', v: '6' },
-      { k: 'Arguments started', v: done ? '18' : String(Math.max(0, step) * 3) },
-      { k: 'Tokens sacrificed', v: done ? '4,821' : (Math.max(0, step) * 780).toLocaleString() },
-      { k: 'Money burned', v: done ? '₹0.37' : '₹0.0' + Math.max(0, step) },
-      { k: 'Necessity score', v: '0.4 / 10' }
+      { k: 'Experts bothered', v: String(runAgents.length || enabledCount) },
+      { k: 'Arguments started', v: String(runMetrics?.argumentCount || Math.max(0, step)) },
+      { k: 'Tokens sacrificed', v: (runUsage?.totalTokens || 0).toLocaleString() },
+      { k: 'Money burned', v: `₹${((runUsage?.estimatedCostMinor || 0) / 100).toFixed(2)}` },
+      { k: 'Necessity score', v: `${runMetrics?.necessityScore ?? 0} / 1` }
     ],
     overall,
+    finalHeadline: finalVerdict?.headline || 'THE COUNCIL IS STILL THINKING.',
+    finalExplanation: finalVerdict?.explanation || '',
+    approveCount: finalVerdict?.approveCount || 0,
+    disapproveCount: finalVerdict?.disapproveCount || 0,
+    dissentingNames: (finalVerdict?.dissentingAgentIds || []).map(id => activeAgentDefs.find(agent => agent.id === id)?.name || id).join(', ') || 'Nobody filed a formal objection',
+    metricsCards: [
+      { label: 'EXPERTS BOTHERED', value: String(runAgents.length), note: 'Still more than your gut requested.', color: '#1A1720', tf: 'rotate(-.8deg)' },
+      { label: 'TIME WE’LL NEVER GET BACK', value: `${((runUsage?.durationMs || 0) / 1000).toFixed(1)} sec`, note: 'At least the backend kept receipts.', color: '#1A1720', tf: 'none' },
+      { label: 'TOKENS SACRIFICED', value: (runUsage?.totalTokens || 0).toLocaleString(), note: 'Real tokens from this run.', color: '#FF4FA3', tf: 'rotate(.8deg)' },
+      { label: 'ESTIMATED AI COST', value: `₹${((runUsage?.estimatedCostMinor || 0) / 100).toFixed(2)}`, note: 'Stored in integer minor units.', color: '#1A1720', tf: 'none' },
+      { label: 'ACTUAL PROBLEM DIFFICULTY', value: `${runMetrics?.actualDifficulty || 0} / 100`, note: 'A deliberately unserious product metric.', color: '#8B5CF6', tf: 'rotate(-.6deg)' },
+      { label: 'MENTAL GYMNASTICS SCORE', value: `${runMetrics?.mentalGymnasticsScore || 0} / 100`, note: 'Not recognized by medical science.', color: '#FF4D4D', tf: 'rotate(.6deg)' }
+    ],
     filters: ['All', 'Normal', 'Severe', 'Existential'].map(f => ({
       label: f, pick: () => setHFilter(f),
       bg: hFilter === f ? '#FFD84D' : 'transparent', bd: hFilter === f ? DARK : 'transparent' })),
@@ -295,7 +397,7 @@ export function useOverthinker(props = {}) {
     rows, rowCount: rows.length, noRows: rows.length === 0,
     agreeRows: agentDefs.map(d => ({ emoji: d.emoji, color: d.color, name: d.name, pct: d.drama + '%',
       fill: d.drama > 80 ? '#FF4D4D' : d.drama > 50 ? '#FF8C42' : '#B7F34A' })),
-    enabledCount: 6 - Object.values(disabled).filter(Boolean).length,
+    enabledCount,
     labAgents,
     humorOpts, humorNote: humorNotes[humor],
     providers: [

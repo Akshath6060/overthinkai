@@ -12,14 +12,13 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
       - key: AI_PROVIDER
-        value: openai
+        value: gemini
       - key: COOKIE_SECURE
         value: true
       - key: COOKIE_SAMESITE
         value: none
       - key: FRONTEND_URL
         sync: false
-
