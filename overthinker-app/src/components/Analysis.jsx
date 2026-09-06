@@ -10,7 +10,7 @@ export default function Analysis(v) {
           <div style={css('display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between')}>
             <div style={css('min-width:0;flex:1')}>
               <div style={css('font:700 10px Inter,sans-serif;letter-spacing:.14em;color:#A79FB2;margin-bottom:8px')}>THE PROBLEM · {v.runId}</div>
-              <div style={css("font-family:'Space Grotesk',sans-serif;font-size:clamp(21px,2.8vw,30px);font-weight:700;letter-spacing:-.8px;line-height:1.15;text-wrap:pretty")}>“{v.question}”</div>
+              <h1 style={css("margin:0;font-family:'Space Grotesk',sans-serif;font-size:clamp(21px,2.8vw,30px);font-weight:700;letter-spacing:-.8px;line-height:1.15;text-wrap:pretty")}>“{v.question}”</h1>
               <div style={css('display:flex;flex-wrap:wrap;gap:7px;margin-top:13px')}>
                 <span style={css('font:700 10px Inter,sans-serif;color:#1A1720;border:2px solid #2B2336;background:#FFD84D;padding:3px 9px;border-radius:999px')}>{v.levelUpper} MODE</span>
                 <span style={css('font:700 10px Inter,sans-serif;color:#1A1720;border:2px solid #2B2336;background:#4CC9F0;padding:3px 9px;border-radius:999px')}>{v.catUpper}</span>

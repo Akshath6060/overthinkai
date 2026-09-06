@@ -11,6 +11,25 @@ from .provider import AIProvider
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
+# Gemini's responseSchema is an OpenAPI 3.0 subset and rejects these JSON Schema keywords outright.
+_UNSUPPORTED_SCHEMA_KEYS = {"additionalProperties", "$schema", "$defs"}
+
+
+def _response_schema(schema: type[BaseModel]) -> dict:
+    """Convert a Pydantic JSON Schema into the subset Gemini accepts, inlining any $ref."""
+    root = schema.model_json_schema(by_alias=True)
+    definitions = root.get("$defs", {})
+
+    def convert(node):
+        if isinstance(node, list): return [convert(item) for item in node]
+        if not isinstance(node, dict): return node
+        if "$ref" in node:
+            target = definitions.get(node["$ref"].rsplit("/", 1)[-1], {})
+            return convert({**target, **{k: v for k, v in node.items() if k != "$ref"}})
+        return {k: convert(v) for k, v in node.items() if k not in _UNSUPPORTED_SCHEMA_KEYS}
+
+    return convert(root)
+
 
 class GeminiProvider(AIProvider):
     """Gemini Generate Content implementation with validated structured outputs."""
@@ -28,7 +47,7 @@ class GeminiProvider(AIProvider):
             "contents": [{"role": "user", "parts": [{"text": json.dumps(payload, ensure_ascii=False)}]}],
             "generationConfig": {
                 "responseMimeType": "application/json",
-                "responseSchema": schema.model_json_schema(by_alias=True),
+                "responseSchema": _response_schema(schema),
                 "temperature": 0.8,
             },
         }

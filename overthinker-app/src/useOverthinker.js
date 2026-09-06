@@ -1,27 +1,43 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  agentDefs, loadingMsgs, logScript, loginSteps, loginMsgs, historyRows,
+  agentDefs, loadingMsgs, loginSteps, loginMsgs,
   quizQuestionDefs, navDefs, pageTitles, catColors, levelDefs, levelHints,
   exampleLabels, exColors, lvlBg, lvlEmoji, humorNotes, toggleDefs
 } from './data.js';
-import { API_URL, api } from './api.js';
+import { API_URL, AUTH_EXPIRED_EVENT, ApiError, api } from './api.js';
 
 const DARK = '#2B2336';
 const SHADOW = '3px 3px 0 ' + DARK;
 
-const agentIds = ['agent_finance', 'agent_risk', 'agent_emotion', 'agent_practical', 'agent_devil', 'agent_judge'];
+const defaultAgentIds = ['agent_finance', 'agent_risk', 'agent_emotion', 'agent_practical', 'agent_devil', 'agent_judge'];
+
+function normalizeAgent(agent, fallback = {}) {
+  return {
+    ...fallback,
+    ...agent,
+    drama: agent.dramaScore ?? fallback.drama ?? 50,
+    useful: agent.usefulnessScore ?? fallback.useful ?? 50,
+    confid: agent.confidenceProfile ?? fallback.confid ?? 70,
+    conf: agent.confidenceProfile ?? fallback.conf ?? 70,
+    knowledge: agent.knowledgeLabel ?? fallback.knowledge ?? 'User supplied',
+    thinking: fallback.thinking || 'OVERTHINKING',
+  };
+}
 
 export function useOverthinker(props = {}) {
   const accent = props.accent || '#8B5CF6';
 
   const [authed, setAuthed] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [serviceUnavailable, setServiceUnavailable] = useState(false);
+  const [account, setAccount] = useState(null);
   const [loginPhase, setLoginPhase] = useState('idle');
   const [loginStep, setLoginStep] = useState(-1);
   const [loginMsgIdx, setLoginMsgIdx] = useState(0);
   const [quizOpen, setQuizOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const [page, setPage] = useState('new');
+  const [page, setPage] = useState(props.initialPage || 'new');
   const [phase, setPhase] = useState('input');
   const [q, setQ] = useState('');
   const [cat, setCat] = useState(null);
@@ -44,6 +60,19 @@ export function useOverthinker(props = {}) {
   const [search, setSearch] = useState('');
   const [humorState, setHumorState] = useState(null);
 
+  const [historyItems, setHistoryItems] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState('');
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
+  const [serverAgents, setServerAgents] = useState([]);
+  const [agentPresets, setAgentPresets] = useState([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentsError, setAgentsError] = useState('');
+
   const [order, setOrder] = useState([0, 1, 2, 3, 4, 5]);
   const [disabled, setDisabled] = useState({});
   const [toggles, setToggles] = useState({ stream: true, verbose: true, notify: false, chime: false, autosave: true });
@@ -52,6 +81,7 @@ export function useOverthinker(props = {}) {
   const msgTimer = useRef(null);
   const countTimer = useRef(null);
   const streamRef = useRef(null);
+  const initialRestoreStarted = useRef(false);
 
   const clearAll = useCallback(() => {
     timers.current.forEach(clearTimeout);
@@ -64,9 +94,107 @@ export function useOverthinker(props = {}) {
 
   useEffect(() => clearAll, [clearAll]);
 
-  useEffect(() => {
-    api('/me').then(() => setAuthed(true)).catch(() => setAuthed(false));
+  const applyAccount = useCallback(payload => {
+    setAccount(payload);
+    const settings = payload?.settings || {};
+    if (settings.defaultSeverity) setLevelState(settings.defaultSeverity);
+    if (settings.humorLevel) setHumorState(settings.humorLevel);
+    setToggles(current => ({
+      ...current,
+      stream: settings.streamAgentOutput ?? current.stream,
+      verbose: settings.verboseActivityLog ?? current.verbose,
+      notify: settings.notifyOnComplete ?? current.notify,
+      chime: settings.consensusChime ?? current.chime,
+      autosave: settings.autoSave ?? current.autosave,
+    }));
   }, []);
+
+  const restoreSession = useCallback(async () => {
+    setAuthReady(false);
+    setServiceUnavailable(false);
+    try {
+      const payload = await api('/me');
+      applyAccount(payload);
+      setAuthed(true);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) setAuthed(false);
+      else setServiceUnavailable(true);
+    } finally {
+      setAuthReady(true);
+    }
+  }, [applyAccount]);
+
+  useEffect(() => {
+    if (initialRestoreStarted.current) return;
+    initialRestoreStarted.current = true;
+    restoreSession();
+  }, [restoreSession]);
+
+  useEffect(() => {
+    const expire = () => {
+      setAuthed(false);
+      setAccount(null);
+      setApiError('Your session expired. Please enter again.');
+    };
+    window.addEventListener(AUTH_EXPIRED_EVENT, expire);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, expire);
+  }, []);
+
+  useEffect(() => {
+    if (props.routePage && props.routePage !== page) setPage(props.routePage);
+  }, [page, props.routePage]);
+
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError('');
+    try {
+      const payload = await api('/decisions?limit=100');
+      setHistoryItems(payload.items || []);
+    } catch (error) {
+      setHistoryError(error.message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    setAnalyticsError('');
+    try {
+      setAnalyticsData(await api(`/analytics?timezone=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')}`));
+    } catch (error) {
+      setAnalyticsError(error.message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
+
+  const loadAgents = useCallback(async () => {
+    setAgentsLoading(true);
+    setAgentsError('');
+    try {
+      const [payload, presetsPayload] = await Promise.all([api('/agents'), api('/agent-presets')]);
+      const incoming = payload.agents || [];
+      setAgentPresets(presetsPayload.presets || []);
+      setServerAgents(incoming);
+      setOrder(incoming.map((_, index) => index));
+      setDisabled(Object.fromEntries(incoming.map((agent, index) => [index, !agent.enabled])));
+    } catch (error) {
+      setAgentsError(error.message);
+    } finally {
+      setAgentsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authed && !serverAgents.length) loadAgents();
+  }, [authed, loadAgents, serverAgents.length]);
+
+  useEffect(() => {
+    if (!authed) return;
+    if (page === 'history') loadHistory();
+    if (page === 'analytics') loadAnalytics();
+  }, [authed, loadAnalytics, loadHistory, page]);
 
   const level = levelState || props.defaultLevel || 'SEVERE';
   const humor = humorState || props.humorLevel || 'Dry';
@@ -74,7 +202,8 @@ export function useOverthinker(props = {}) {
   const enterApp = useCallback(async () => {
     clearAll();
     try {
-      await api('/auth/guest', { method: 'POST' });
+      const payload = await api('/auth/guest', { method: 'POST' });
+      applyAccount(payload);
       setAuthed(true);
       setApiError('');
       setLoginPhase('idle');
@@ -84,7 +213,7 @@ export function useOverthinker(props = {}) {
       setApiError(error.message);
       setLoginPhase('idle');
     }
-  }, [clearAll]);
+  }, [applyAccount, clearAll]);
 
   const startLogin = useCallback(() => {
     clearAll();
@@ -132,9 +261,10 @@ export function useOverthinker(props = {}) {
     setRunMetrics(null);
     setRunProgress(0);
     const selectedIndexes = order.filter(index => !disabled[index]);
-    const selectedAgentIds = selectedIndexes.map(index => agentIds[index]);
+    const sourceAgents = serverAgents.length ? serverAgents.map((agent, index) => normalizeAgent(agent, agentDefs[defaultAgentIds.indexOf(agent.id)] || {})) : agentDefs.map((agent, index) => ({ ...agent, id: defaultAgentIds[index] }));
+    const selectedAgentIds = selectedIndexes.map(index => sourceAgents[index].id);
     const initialAgents = selectedIndexes.map((index, position) => ({
-      ...agentDefs[index], id: agentIds[index], position, status: 'queued'
+      ...sourceAgents[index], position, status: 'queued'
     }));
     setRunAgents(initialAgents);
     setMsgIdx(0);
@@ -196,12 +326,16 @@ export function useOverthinker(props = {}) {
       };
       stream.addEventListener('run.failed', fail);
       stream.addEventListener('run.cancelled', fail);
+      stream.onerror = () => {
+        if (!navigator.onLine) setApiError('Connection lost. The council will reconnect when you are online.');
+        else api('/me').catch(() => null);
+      };
     } catch (error) {
       clearInterval(msgTimer.current);
       setApiError(error.message);
       setPhase('input');
     }
-  }, [cat, clearAll, disabled, humor, level, order, q, toggles.autosave]);
+  }, [cat, clearAll, disabled, humor, level, order, q, serverAgents, toggles.autosave]);
 
   const reset = useCallback(() => {
     clearAll();
@@ -218,7 +352,10 @@ export function useOverthinker(props = {}) {
     setApiError('');
   }, [clearAll]);
 
-  const go = id => () => setPage(id);
+  const go = id => () => {
+    setPage(id);
+    props.navigate?.(id);
+  };
 
   // ---- derived view values (the mockup's renderVals) ----
 
@@ -236,7 +373,7 @@ export function useOverthinker(props = {}) {
 
   const levels = levelDefs.map(l => {
     const on = level === l.name;
-    return { ...l, on, pick: () => setLevelState(l.name),
+    return { ...l, on, pick: () => { setLevelState(l.name); if (page === 'settings') persistSetting('defaultSeverity', l.name); },
       bg: on ? l.color : '#FFF', sh: on ? '5px 5px 0 ' + DARK : '2px 2px 0 ' + DARK,
       tf: on ? 'rotate(-1deg)' : 'none', fg: DARK, sub: on ? '#2B2336' : '#6F687A' };
   });
@@ -248,7 +385,10 @@ export function useOverthinker(props = {}) {
 
   const question = (q || '').trim();
 
-  const activeAgentDefs = runAgents.length ? runAgents : agentDefs.map((agent, index) => ({ ...agent, id: agentIds[index], status: 'queued' }));
+  const uiAgentDefs = serverAgents.length
+    ? serverAgents.map(agent => normalizeAgent(agent, agentDefs[defaultAgentIds.indexOf(agent.id)] || {}))
+    : agentDefs.map((agent, index) => ({ ...agent, id: defaultAgentIds[index], enabled: !disabled[index] }));
+  const activeAgentDefs = runAgents.length ? runAgents : uiAgentDefs.map(agent => ({ ...agent, status: 'queued' }));
   const agents = activeAgentDefs.map((d, i) => {
     const done = d.status === 'completed';
     const thinking = d.status === 'running';
@@ -283,14 +423,33 @@ export function useOverthinker(props = {}) {
 
   const running = phase === 'running', done = phase === 'done';
 
-  const rows = historyRows
-    .filter(r => hFilter === 'All' || r.level === hFilter.toUpperCase())
-    .filter(r => r.q.toLowerCase().includes(search.toLowerCase()))
-    .map(r => ({ ...r, levelUp: r.level, emoji: lvlEmoji[r.level], lvlBg: lvlBg[r.level],
-      confColor: parseInt(r.conf) > 85 ? '#B7F34A' : parseInt(r.conf) > 65 ? '#FFD84D' : '#FF4D4D' }));
+  const rows = historyItems
+    .filter(r => hFilter === 'All' || r.severity === hFilter.toUpperCase())
+    .filter(r => r.question.toLowerCase().includes(search.toLowerCase()))
+    .map(r => {
+      const confidence = Number(r.confidence || 0);
+      return { ...r, q: r.question, verdict: r.finalVerdictHeadline || (r.runStatus === 'completed' ? 'Verdict unavailable' : `Analysis ${r.runStatus}`),
+        levelUp: r.severity, emoji: lvlEmoji[r.severity], lvlBg: lvlBg[r.severity], agents: r.agentCount,
+        conf: `${confidence}%`, date: new Date(r.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }),
+        confColor: confidence > 85 ? '#B7F34A' : confidence > 65 ? '#FFD84D' : '#FF4D4D' };
+    });
 
+  const persistSetting = useCallback(async (key, value) => {
+    setSettingsSaving(true);
+    setSettingsError('');
+    try {
+      const settings = await api('/settings', { method: 'PATCH', body: JSON.stringify({ [key]: value }) });
+      setAccount(current => current ? { ...current, settings } : current);
+    } catch (error) {
+      setSettingsError(error.message);
+    } finally {
+      setSettingsSaving(false);
+    }
+  }, []);
+
+  const saveAgentOrder = nextOrder => api('/agents/order', { method: 'PUT', body: JSON.stringify({ agentIds: nextOrder.map(index => uiAgentDefs[index].id) }) }).catch(error => setAgentsError(error.message));
   const labAgents = order.map((idx, pos) => {
-    const d = agentDefs[idx], off = !!disabled[idx];
+    const d = uiAgentDefs[idx], off = !!disabled[idx];
     return { ...d, key: idx, opacity: off ? .55 : 1,
       tf: pos % 3 === 1 ? 'rotate(-.6deg)' : pos % 3 === 2 ? 'rotate(.6deg)' : 'none',
       stats: [
@@ -301,20 +460,29 @@ export function useOverthinker(props = {}) {
       toggleLabel: off ? 'BENCHED' : 'ON DUTY',
       trackBg: off ? '#FFF8E7' : '#B7F34A',
       knobPos: off ? 'flex-start' : 'flex-end',
-      toggle: () => setDisabled(st => ({ ...st, [idx]: !st[idx] })),
-      up: () => setOrder(st => { const o = [...st]; if (pos > 0) { [o[pos - 1], o[pos]] = [o[pos], o[pos - 1]]; } return o; }),
-      down: () => setOrder(st => { const o = [...st]; if (pos < o.length - 1) { [o[pos + 1], o[pos]] = [o[pos], o[pos + 1]]; } return o; }) };
+      toggle: () => {
+        const next = !off;
+        setDisabled(st => ({ ...st, [idx]: next }));
+        api(`/agents/${d.id}`, { method: 'PATCH', body: JSON.stringify({ enabled: !next }) }).catch(error => { setDisabled(st => ({ ...st, [idx]: off })); setAgentsError(error.message); });
+      },
+      up: () => { const o = [...order]; if (pos > 0) { [o[pos - 1], o[pos]] = [o[pos], o[pos - 1]]; setOrder(o); saveAgentOrder(o); } },
+      down: () => { const o = [...order]; if (pos < o.length - 1) { [o[pos + 1], o[pos]] = [o[pos], o[pos + 1]]; setOrder(o); saveAgentOrder(o); } } };
   });
 
   const toggleRows = toggleDefs.map(t => {
     const on = toggles[t.k];
     return { ...t, trackBg: on ? accent : '#FFF8E7', knobPos: on ? 'flex-end' : 'flex-start',
-      toggle: () => setToggles(st => ({ ...st, [t.k]: !st[t.k] })) };
+      on, toggle: () => {
+        const next = !on;
+        setToggles(st => ({ ...st, [t.k]: next }));
+        const keys = { stream: 'streamAgentOutput', verbose: 'verboseActivityLog', notify: 'notifyOnComplete', chime: 'consensusChime', autosave: 'autoSave' };
+        persistSetting(keys[t.k], next);
+      } };
   });
 
   const humorOpts = ['Professional', 'Dry', 'Unhinged'].map(h => {
     const on = humor === h;
-    return { label: h, pick: () => setHumorState(h),
+    return { label: h, on, pick: () => { setHumorState(h); persistSetting('humorLevel', h); },
       bg: on ? '#FFD84D' : 'transparent', bd: on ? DARK : 'transparent' };
   });
 
@@ -329,10 +497,10 @@ export function useOverthinker(props = {}) {
       anim: act ? 'ot-bob 1s ease-in-out infinite' : fin ? 'ot-pop .3s ease both' : 'none',
       dotAnim: act ? 'ot-blink .9s ease-in-out infinite' : 'none' };
   });
-  const enabledCount = 6 - Object.values(disabled).filter(Boolean).length;
+  const enabledCount = uiAgentDefs.length - Object.values(disabled).filter(Boolean).length;
 
   return {
-    authed, needsAuth: !authed,
+    authed, needsAuth: !authed, authReady, serviceUnavailable, restoreSession, account,
     loginIdle: loginPhase === 'idle', loginRunning: loginPhase === 'running',
     loginGranted: loginPhase === 'granted', loginNotGranted: loginPhase !== 'granted',
     loginRows, loginMsg: loginMsgs[loginMsgIdx],
@@ -348,9 +516,9 @@ export function useOverthinker(props = {}) {
     accent,
     nav, pageTitle: pageTitles[page],
     pageMeta: page === 'new' ? (done ? `verdict delivered · ${runAgents.length} experts bothered` : running ? 'overthinking in progress' : 'idle · awaiting something trivial')
-      : page === 'history' ? '6 regrets on file'
+      : page === 'history' ? `${account?.historyCount ?? historyItems.length} regrets on file`
       : page === 'analytics' ? 'last 7 days of hesitation'
-      : page === 'lab' ? '6 experts · 1 weird draft' : 'nothing here will help',
+      : page === 'lab' ? `${uiAgentDefs.length} experts · ${enabledCount} on duty` : 'nothing here will help',
     isNew: page === 'new', isHistory: page === 'history', isAnalytics: page === 'analytics',
     isLab: page === 'lab', isSettings: page === 'settings',
     isInput: page === 'new' && phase === 'input',
@@ -394,17 +562,30 @@ export function useOverthinker(props = {}) {
       label: f, pick: () => setHFilter(f),
       bg: hFilter === f ? '#FFD84D' : 'transparent', bd: hFilter === f ? DARK : 'transparent' })),
     search, onSearch: e => setSearch(e.target.value),
-    rows, rowCount: rows.length, noRows: rows.length === 0,
-    agreeRows: agentDefs.map(d => ({ emoji: d.emoji, color: d.color, name: d.name, pct: d.drama + '%',
+    rows, rowCount: rows.length, noRows: rows.length === 0, historyLoading, historyError, retryHistory: loadHistory,
+    analyticsData, analyticsLoading, analyticsError, retryAnalytics: loadAnalytics,
+    agreeRows: uiAgentDefs.map(d => ({ emoji: d.emoji, color: d.color, name: d.name, pct: d.drama + '%',
       fill: d.drama > 80 ? '#FF4D4D' : d.drama > 50 ? '#FF8C42' : '#B7F34A' })),
     enabledCount,
-    labAgents,
+    labAgents, agentCount: uiAgentDefs.length, agentPresets, agentsLoading, agentsError, retryAgents: loadAgents,
+    createAgent: async values => {
+      setAgentsError('');
+      try { await api('/agents', { method: 'POST', body: JSON.stringify(values) }); await loadAgents(); return true; }
+      catch (error) { setAgentsError(error.message); return false; }
+    },
     humorOpts, humorNote: humorNotes[humor],
     providers: [
       { name: 'Overthinker Council v4', note: 'Six-agent default. Deliberately slow.', latency: '~12s', inner: accent },
       { name: 'Single Model, One Opinion', note: 'Answers instantly. Defeats the entire purpose.', latency: '~0.8s', inner: 'transparent' },
       { name: 'Bring Your Own Key', note: 'Route the chaos through your own provider.', latency: 'varies', inner: 'transparent' }
     ],
-    toggleRows
+    toggleRows, settingsSaving, settingsError, persistSetting,
+    exportData: () => { window.location.assign(`${API_URL}/api/v1/me/export`); },
+    deleteHistory: async () => {
+      setSettingsSaving(true); setSettingsError('');
+      try { await api('/me/decisions', { method: 'DELETE' }); setHistoryItems([]); setAccount(current => current ? { ...current, historyCount: 0 } : current); }
+      catch (error) { setSettingsError(error.message); }
+      finally { setSettingsSaving(false); }
+    }
   };
 }

@@ -4,7 +4,13 @@ a{color:#8B5CF6;text-decoration:none;font-weight:600}
 a:hover{color:#FF4FA3}
 ::selection{background:#FFD84D}
 textarea,input,button{font:inherit}
+button:disabled{cursor:not-allowed!important;opacity:.65}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #8B5CF6;outline-offset:3px}
 textarea::placeholder,input::placeholder{color:#A79FB2}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.offline-banner{position:fixed;z-index:100;left:50%;bottom:16px;transform:translateX(-50%);width:min(92vw,680px);padding:10px 14px;border:3px solid #2B2336;border-radius:12px;background:#FFD84D;box-shadow:4px 4px 0 #2B2336;text-align:center;font:700 12px Inter,sans-serif;color:#1A1720}
+.app-loading,.panel-state{min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;font-family:Inter,system-ui,sans-serif;color:#2B2336}
+.app-loading>span{font-size:34px;animation:ot-bob 1.1s ease-in-out infinite}.panel-state{max-width:720px;margin:auto;background:#FFF;border:3px solid #2B2336;border-radius:18px;box-shadow:6px 6px 0 #2B2336}.panel-state h1,.panel-state strong{font-family:Bangers,cursive;font-size:clamp(24px,5vw,38px);letter-spacing:.8px;margin:0}.panel-state p,.panel-state span{color:#6F687A;font-weight:600}
 @keyframes ot-pop{0%{opacity:0;transform:scale(.94) translateY(10px)}60%{transform:scale(1.015) translateY(0)}100%{opacity:1;transform:none}}
 @keyframes ot-slam{0%{opacity:0;transform:scale(1.14) rotate(-1.5deg)}55%{opacity:1;transform:scale(.985) rotate(.4deg)}100%{opacity:1;transform:none}}
 @keyframes ot-wiggle{0%{transform:rotate(0)}25%{transform:rotate(-7deg)}50%{transform:rotate(6deg)}75%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
@@ -17,4 +23,11 @@ textarea::placeholder,input::placeholder{color:#A79FB2}
 [data-mobilenav]{display:flex!important}
 [data-shell]{flex-direction:column!important}
 [data-rightpanel]{display:none!important}
+}
+@media (max-width:430px){
+body{overflow-x:hidden}
+[data-mobilenav]{padding-inline:8px!important}
+}
+@media (prefers-reduced-motion:reduce){
+*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
 }

@@ -2,8 +2,10 @@ import React from 'react';
 import { css, Sx } from '../lib/sx.jsx';
 import { authMetrics } from '../data.js';
 import Logo from './Logo.jsx';
+import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 export default function LoginScreen(v) {
+  const quizRef = useDialogFocus(v.quizOpen, v.closeQuiz);
   return (
     <div style={css('min-height:100vh;background:#FFF8E7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#1A1720;padding:clamp(18px,4vw,52px) clamp(14px,4vw,40px);display:flex;flex-direction:column;align-items:center;gap:22px')}>
 
@@ -93,10 +95,10 @@ export default function LoginScreen(v) {
 
       {v.quizOpen && (
         <div style={css('position:fixed;inset:0;z-index:50;background:rgba(43,35,54,.55);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto')}>
-          <div style={css('width:100%;max-width:520px;background:#FFF;border:4px solid #2B2336;border-radius:22px;box-shadow:9px 9px 0 #2B2336;animation:ot-pop .3s cubic-bezier(.2,.9,.3,1.1) both;overflow:hidden')}>
+          <div ref={quizRef} role="dialog" aria-modal="true" aria-labelledby="identity-dialog-title" style={css('width:100%;max-width:520px;background:#FFF;border:4px solid #2B2336;border-radius:22px;box-shadow:9px 9px 0 #2B2336;animation:ot-pop .3s cubic-bezier(.2,.9,.3,1.1) both;overflow:hidden')}>
             <div style={css('display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:3px solid #2B2336;background:#FFD84D')}>
-              <span style={css('font-family:Bangers,cursive;font-size:19px;letter-spacing:.7px;color:#2B2336')}>EXTENDED IDENTITY INTERROGATION</span>
-              <button onClick={v.closeQuiz} style={css('margin-left:auto;width:28px;height:28px;flex:none;border:2px solid #2B2336;border-radius:9px;background:#FFF;color:#2B2336;font-size:13px;font-weight:700;cursor:pointer;box-shadow:2px 2px 0 #2B2336')}>✕</button>
+              <span id="identity-dialog-title" style={css('font-family:Bangers,cursive;font-size:19px;letter-spacing:.7px;color:#2B2336')}>EXTENDED IDENTITY INTERROGATION</span>
+              <button type="button" aria-label="Close identity questions" onClick={v.closeQuiz} style={css('margin-left:auto;width:28px;height:28px;flex:none;border:2px solid #2B2336;border-radius:9px;background:#FFF;color:#2B2336;font-size:13px;font-weight:700;cursor:pointer;box-shadow:2px 2px 0 #2B2336')}>✕</button>
             </div>
             <div style={css('padding:16px 18px;display:flex;flex-direction:column;gap:12px')}>
               {v.quizQuestions.map((qq, i) => (
@@ -121,7 +123,8 @@ export default function LoginScreen(v) {
         </div>
       )}
 
-      <div style={css('max-width:780px;text-align:center;font-size:11.5px;color:#A79FB2;font-weight:600')}>This is a demo session. Nothing is stored anywhere important, and we ultimately just let you in.</div>
+      {v.apiError && <div role="alert" style={css('max-width:780px;padding:10px 14px;border:2px solid #2B2336;border-radius:10px;background:#FFB3B3;color:#1A1720;font-size:12.5px;font-weight:700')}>{v.apiError}</div>}
+      <div style={css('max-width:780px;text-align:center;font-size:11.5px;color:#A79FB2;font-weight:600')}>This creates a private guest session. No email, password, or unnecessary paperwork required.</div>
     </div>
   );
 }

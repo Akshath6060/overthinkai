@@ -19,6 +19,6 @@ class ProcessRateLimiter:
             while hits and hits[0] <= now - window_seconds:
                 hits.popleft()
             if len(hits) >= limit:
-                raise AppError(429, "RATE_LIMITED", "Too many requests. Please reconsider more slowly.")
+                retry_after = max(1, int(window_seconds - (now - hits[0])) + 1)
+                raise AppError(429, "RATE_LIMITED", "Too many requests. Please reconsider more slowly.", headers={"Retry-After": str(retry_after)})
             hits.append(now)
-

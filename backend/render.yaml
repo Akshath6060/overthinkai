@@ -22,3 +22,9 @@ services:
         value: none
       - key: FRONTEND_URL
         sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: DOCS_ENABLED
+        value: false
+      - key: LOG_LEVEL
+        value: INFO

@@ -16,12 +16,12 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4.1-mini"
     openai_judge_model: str = "gpt-4.1-mini"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
-    gemini_judge_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.6-flash"
+    gemini_judge_model: str = "gemini-3.6-flash"
     session_secret: str = "development-only-change-me-please-32-chars"
     session_expire_days: int = Field(default=30, ge=1, le=365)
     frontend_url: str = "http://localhost:5173"
-    allowed_origins: str = "http://localhost:5173"
+    allowed_origins: str = ""
     default_credit_allowance: int = Field(default=1000, ge=0)
     ai_provider: Literal["openai", "gemini", "mock"] = "mock"
     log_level: str = "INFO"
@@ -44,8 +44,18 @@ class Settings(BaseSettings):
                 raise ValueError("MONGODB_URI is required in production")
             if self.ai_provider == "mock":
                 raise ValueError("AI_PROVIDER=mock is not allowed in production")
+            if self.ai_provider == "openai" and not self.openai_api_key.strip():
+                raise ValueError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
+            if self.ai_provider == "gemini" and not self.gemini_api_key.strip():
+                raise ValueError("GEMINI_API_KEY is required when AI_PROVIDER=gemini")
+            if not self.cookie_secure:
+                raise ValueError("COOKIE_SECURE=true is required in production")
             if self.cookie_samesite == "none" and not self.cookie_secure:
                 raise ValueError("SameSite=None cookies require COOKIE_SECURE=true")
+            if not self.frontend_url.startswith("https://"):
+                raise ValueError("FRONTEND_URL must use HTTPS in production")
+            if any(origin == "*" or not origin.startswith("https://") for origin in self.cors_origins):
+                raise ValueError("Production CORS origins must be explicit HTTPS origins")
         return self
 
 

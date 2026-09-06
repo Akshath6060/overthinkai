@@ -17,11 +17,12 @@ export default function NewDecision(v) {
           <span style={css('font-family:Bangers,cursive;font-size:17px;letter-spacing:.6px;color:#2B2336')}>DROP YOUR LIFE-CHANGING PROBLEM HERE</span>
           <span style={css('transform:rotate(2deg);font:700 9.5px Inter,sans-serif;letter-spacing:.08em;padding:3px 8px;border:2px solid #2B2336;border-radius:999px;background:#FFD84D')}>EXTREMELY IMPORTANT</span>
         </div>
-        <textarea value={v.q} onChange={v.onQ} rows="3" placeholder="Should I finally make this decision?" style={css("display:block;width:100%;border:0;outline:none;resize:none;background:transparent;color:#1A1720;font-family:'Space Grotesk',sans-serif;font-size:19px;line-height:1.45;font-weight:600;padding:12px 18px 6px;letter-spacing:-.3px")}></textarea>
+        <label htmlFor="decision-question" className="sr-only">Decision to analyse</label>
+        <textarea id="decision-question" value={v.q} onChange={v.onQ} maxLength={2000} rows="3" placeholder="Should I finally make this decision?" style={css("display:block;width:100%;border:0;outline:none;resize:none;background:transparent;color:#1A1720;font-family:'Space Grotesk',sans-serif;font-size:19px;line-height:1.45;font-weight:600;padding:12px 18px 6px;letter-spacing:-.3px")}></textarea>
         <div style={css('padding:0 18px 12px;font-size:11.5px;color:#A79FB2;font-weight:600')}>Please ensure this decision is unnecessarily complicated.</div>
         <div style={css('display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 16px')}>
           {v.cats.map(c => (
-            <Sx key={c.label} as="button" onClick={c.pick}
+            <Sx key={c.label} as="button" type="button" onClick={c.pick} aria-pressed={c.bg !== '#FFF'}
               style={`padding:5px 12px;border-radius:999px;border:2px solid #2B2336;background:${c.bg};color:#1A1720;font-size:12px;font-weight:700;cursor:pointer;box-shadow:${c.sh};transition:transform .12s,box-shadow .12s`}
               hover="transform:translate(-1px,-1px);box-shadow:3px 3px 0 #2B2336"
               active="transform:translate(1px,1px);box-shadow:0 0 0 #2B2336">{c.label}</Sx>
@@ -35,7 +36,7 @@ export default function NewDecision(v) {
           </div>
           <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px')}>
             {v.levels.map(l => (
-              <Sx key={l.name} as="button" onClick={l.pick}
+              <Sx key={l.name} as="button" type="button" onClick={l.pick} aria-pressed={l.on}
                 style={`text-align:left;padding:13px 14px;border-radius:14px;border:3px solid #2B2336;background:${l.bg};cursor:pointer;box-shadow:${l.sh};transform:${l.tf};transition:transform .13s,box-shadow .13s`}
                 hover="transform:translate(-2px,-2px);box-shadow:5px 5px 0 #2B2336"
                 active="transform:translate(1px,1px);box-shadow:1px 1px 0 #2B2336">
@@ -50,11 +51,11 @@ export default function NewDecision(v) {
               </Sx>
             ))}
           </div>
-          <Sx as="button" onClick={v.begin}
+          <Sx as="button" type="button" onClick={v.begin} disabled={v.isRunning} aria-busy={v.isRunning}
             style={`margin-top:18px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:16px;border-radius:16px;border:3px solid #2B2336;background:${v.accent};color:#FFF;font-family:Bangers,cursive;font-size:clamp(24px,3.6vw,32px);letter-spacing:1.2px;cursor:pointer;box-shadow:6px 6px 0 #2B2336;transition:transform .12s,box-shadow .12s`}
             hover="transform:translate(-2px,-3px);box-shadow:8px 9px 0 #2B2336"
             active="transform:translate(3px,3px);box-shadow:1px 1px 0 #2B2336">
-            <span style={css('font-size:26px;line-height:1')}>🧠</span> BEGIN OVERTHINKING <span style={css('opacity:.85')}>→</span>
+            <span aria-hidden="true" style={css('font-size:26px;line-height:1')}>🧠</span> BEGIN OVERTHINKING <span aria-hidden="true" style={css('opacity:.85')}>→</span>
           </Sx>
           {v.apiError && <div role="alert" style={css('margin-top:12px;padding:10px 12px;border:2px solid #2B2336;border-radius:10px;background:#FFB3B3;color:#1A1720;font-size:12.5px;font-weight:700')}>{v.apiError}</div>}
           <div style={css('text-align:center;font-size:11.5px;color:#6F687A;font-weight:600;margin-top:10px')}>Average unnecessary analysis time: 12 seconds. Yours may be worse.</div>

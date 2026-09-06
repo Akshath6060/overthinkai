@@ -1,0 +1,13 @@
+{
+  "name": "Overthinker AI",
+  "short_name": "Overthinker",
+  "description": "Let multiple AI agents overthink your decisions.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF8E7",
+  "theme_color": "#FFF8E7",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
