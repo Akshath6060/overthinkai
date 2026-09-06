@@ -73,14 +73,21 @@ Runs with `autoSave=false` remain retrievable and streamable but are excluded fr
 
 ## Render
 
-The included `render.yaml` uses the Dockerfile. Manual settings:
+The included `render.yaml` uses the Dockerfile (Python 3.11). For a manual
+Docker service, use the repository root, `backend/Dockerfile`, the `backend`
+Docker context, and `/health` as the health check.
 
-- Root directory: repository root
-- Runtime: Docker
-- Dockerfile: `backend/Dockerfile`
-- Docker context: `backend`
+For a manual native Python service:
+
+- Root directory: `backend`
+- Runtime: Python
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Health check: `/health`
-- Start command (if not using Docker): `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+The checked-in `.python-version` pins Python 3.12.8 for native Render builds so
+binary wheels are available for the pinned Pydantic/PyMongo dependencies. Do
+not let the service fall forward to an unsupported newer Python runtime.
 
 One web worker is recommended for the in-process MVP queue and rate limiter. The limiter is explicitly per-process, not distributed.
 
