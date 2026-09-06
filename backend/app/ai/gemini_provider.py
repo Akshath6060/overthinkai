@@ -70,6 +70,20 @@ class GeminiProvider(AIProvider):
         base = min(8.0, 2 ** attempt)
         return base + random.uniform(0, base * 0.25)
 
+    @staticmethod
+    def _quota_type(response: httpx.Response | None) -> str | None:
+        if response is None or response.status_code != 429:
+            return None
+        try:
+            quota_details = json.dumps(response.json().get("error", {}).get("details", [])).casefold()
+        except (AttributeError, TypeError, ValueError):
+            return "unknown"
+        if "perday" in quota_details or "per_day" in quota_details or "daily" in quota_details:
+            return "daily"
+        if "perminute" in quota_details or "per_minute" in quota_details or "retrydelay" in quota_details:
+            return "minute"
+        return "unknown"
+
     async def _structured(self, model: str, system: str, payload: dict, schema: type[OutputT]) -> tuple[OutputT, dict]:
         # One API key is shared by every analyst and every active run. Keep
         # retries inside the gate so a quota response cannot become a request storm.
@@ -87,6 +101,7 @@ class GeminiProvider(AIProvider):
         }
         models = list(dict.fromkeys([model, *self.fallback_models]))
         last_status = None
+        last_quota_type = None
         for model_index, selected_model in enumerate(models):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{selected_model}:generateContent"
             for attempt in range(_MAX_ATTEMPTS_PER_MODEL):
@@ -94,6 +109,7 @@ class GeminiProvider(AIProvider):
                 try:
                     response = await self.client.post(url, headers={"x-goog-api-key": self.api_key}, json=body)
                     last_status = response.status_code
+                    last_quota_type = self._quota_type(response)
                     if response.status_code in _RETRYABLE_STATUSES:
                         # Quotas are model-specific. Rotate immediately instead of
                         # spending more of the same exhausted model's allowance.
@@ -141,7 +157,7 @@ class GeminiProvider(AIProvider):
                     break
             if model_index + 1 < len(models):
                 log_event("ai.provider_fallback", provider="gemini", failedModel=selected_model, fallbackModel=models[model_index + 1], providerStatus=last_status)
-        raise AppError(503, "AI_PROVIDER_UNAVAILABLE", "The Gemini council is temporarily unavailable.", {"providerStatus": last_status})
+        raise AppError(503, "AI_PROVIDER_UNAVAILABLE", "The Gemini council is temporarily unavailable.", {"providerStatus": last_status,"quotaType":last_quota_type})
 
     async def analyze(self, question, agent, severity, humor_level):
         budgets = {"NORMAL": "under 120 words", "SEVERE": "under 220 words", "EXISTENTIAL": "under 350 words"}

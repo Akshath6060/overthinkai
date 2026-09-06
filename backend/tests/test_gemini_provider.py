@@ -88,6 +88,14 @@ async def test_gemini_provider_reads_google_retry_info():
         "error":{"details":[{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"20.75s"}]}
     })
     assert GeminiProvider._retry_delay(response,0)==20.75
+    assert GeminiProvider._quota_type(response)=="minute"
+
+
+async def test_gemini_provider_identifies_daily_quota():
+    response=httpx.Response(429,json={
+        "error":{"details":[{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]}]}
+    })
+    assert GeminiProvider._quota_type(response)=="daily"
 
 
 async def test_gemini_provider_rotates_across_multiple_quota_limited_models(monkeypatch):

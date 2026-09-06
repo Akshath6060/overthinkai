@@ -1,17 +1,59 @@
 import asyncio
 import hashlib
 import time
+from datetime import timedelta
+from zoneinfo import ZoneInfo
 from pymongo.errors import DuplicateKeyError
 
 from app.core.errors import AppError
 from app.core.ids import new_id
 from app.core.logging import log_event
+from app.schemas.ai import JudgeOutput
 from app.schemas.common import utcnow
 from .agent_service import resolve_agents
 from .credit_service import reserve, refund
 
 
 _creation_lock = asyncio.Lock()
+
+
+def quota_failure(quota_type: str) -> tuple[str, dict]:
+    now = utcnow()
+    if quota_type != "daily":
+        reset = now + timedelta(minutes=1)
+        message = "The AI models are temporarily rate-limited. Please try again in about one minute."
+        return message, {"quotaType":quota_type,"retryAt":reset,"retryAfterSeconds":60}
+    pacific_now = now.astimezone(ZoneInfo("America/Los_Angeles"))
+    reset = (pacific_now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(now.tzinfo)
+    remaining_seconds = max(60, round((reset - now).total_seconds()))
+    hours, remainder = divmod(remaining_seconds, 3600)
+    minutes = remainder // 60
+    wait = f"{hours}h {minutes}m" if hours else f"{minutes} minutes"
+    message = f"The AI models' daily quota is exhausted. It resets at midnight Pacific Time; please try again in about {wait}."
+    return message, {"quotaType":"daily","retryAt":reset,"retryAfterSeconds":remaining_seconds}
+
+
+def fallback_verdict(question: str, results: list[dict]) -> JudgeOutput:
+    """Produce a usable final result when analysts succeeded but every judge model failed."""
+    negative_markers = ("NO", "NOT ", "DON'T", "DO NOT", "AVOID", "PAUSE", "STOP", "REJECT", "CAUT")
+    negative = [result for result in results if any(marker in result.get("verdict", "").upper() for marker in negative_markers)]
+    approve_count = len(results) - len(negative)
+    disapprove_count = len(negative)
+    proceed = approve_count >= disapprove_count
+    subject = question.strip().rstrip("?.!")[:120]
+    confidence = max(40, min(85, round(sum(result.get("confidence", 50) for result in results) / len(results)) - 10))
+    dissenters = negative if proceed else [result for result in results if result not in negative]
+    return JudgeOutput(
+        headline=f"{'PROCEED WITH' if proceed else 'PAUSE BEFORE'}: {subject}",
+        explanation=(
+            f"The final judge was temporarily unavailable, so this verdict uses the {len(results)} completed council analyses directly. "
+            f"The majority leans {'toward proceeding' if proceed else 'toward pausing'}, with lower confidence until the external judge returns."
+        ),
+        confidence=confidence,
+        approve_count=approve_count,
+        disapprove_count=disapprove_count,
+        dissenting_agent_ids=[result["agentId"] for result in dissenters],
+    )
 
 
 def request_fingerprint(body) -> str:
@@ -97,6 +139,7 @@ async def execute_run(store, provider, run_id: str):
     analysts = [a for a in snapshots if a["role"] == "analyst"]
     judge = next(a for a in snapshots if a["role"] == "judge")
     await emit(store, run_id, "run.started", {"progress":1})
+    failures = []
 
     async def one(agent):
         current = await store.find_one("analysis_runs", {"_id":run_id})
@@ -115,6 +158,7 @@ async def execute_run(store, provider, run_id: str):
             await emit(store, run_id, "agent.completed", data)
             return data
         except Exception as exc:
+            failures.append(exc)
             log_event(
                 "analysis.agent_failed",
                 runId=run_id,
@@ -134,13 +178,20 @@ async def execute_run(store, provider, run_id: str):
     current = await store.find_one("analysis_runs", {"_id":run_id})
     if current["status"] == "cancelled": return
     if not results:
-        await _fail(store, claimed, "All analysts failed to return a usable result.")
+        quota_errors = [exc for exc in failures if getattr(exc, "details", {}).get("providerStatus") == 429]
+        if quota_errors and len(quota_errors) == len(failures):
+            quota_types = {getattr(exc, "details", {}).get("quotaType") for exc in quota_errors}
+            message, details = quota_failure("daily" if "daily" in quota_types else "minute" if "minute" in quota_types else "unknown")
+            await _fail(store, claimed, message, "AI_QUOTA_EXHAUSTED", details)
+        else:
+            await _fail(store, claimed, "All analysts failed to return a usable result.")
         return
     await store.update_one("analysis_runs", {"_id":run_id}, {"$set":{"progress":80}})
     await emit(store, run_id, "run.progress", {"progress":80,"completedAgents":len(results),"totalAgents":len(analysts)+1})
     await store.update_one("run_agents", {"_id":judge["_id"]}, {"$set":{"status":"running"}})
     await emit(store, run_id, "agent.started", {"agentId":judge["originalAgentId"],"position":judge["position"]})
     judge_mark = time.monotonic()
+    judge_fallback = False
     try:
         verdict, judge_usage = await provider.judge(decision["question"], {"id":judge["originalAgentId"],**judge}, results, decision["severity"], decision["humorLevel"])
     except Exception as exc:
@@ -154,13 +205,15 @@ async def execute_run(store, provider, run_id: str):
             status=getattr(exc, "status", None),
             providerStatus=getattr(exc, "details", {}).get("providerStatus") if isinstance(getattr(exc, "details", None), dict) else None,
         )
-        await store.update_one("run_agents", {"_id":judge["_id"]}, {"$set":{"status":"failed"}})
-        await _fail(store, claimed, "The final judge failed to reach a verdict.")
-        return
+        verdict = fallback_verdict(decision["question"], results)
+        judge_usage = {"inputTokens":0,"outputTokens":0,"estimatedCostMinor":0,"currency":"INR"}
+        judge_fallback = True
+        await store.update_one("analysis_runs", {"_id":run_id}, {"$set":{"partialFailure":True}})
+        await emit(store, run_id, "activity.created", {"message":"The judge missed roll call, so the council formed a direct majority verdict."})
     duration = round((time.monotonic()-judge_mark)*1000)
     final = verdict.model_dump(by_alias=True)
-    await store.update_one("run_agents", {"_id":judge["_id"]}, {"$set":{"status":"completed","output":final,"confidence":verdict.confidence,"durationMs":duration,"usage":judge_usage}})
-    await emit(store, run_id, "agent.completed", {"agentId":judge["originalAgentId"],"position":judge["position"],**final,"durationMs":duration,"usage":judge_usage})
+    await store.update_one("run_agents", {"_id":judge["_id"]}, {"$set":{"status":"completed","output":final,"confidence":verdict.confidence,"durationMs":duration,"usage":judge_usage,"fallbackUsed":judge_fallback}})
+    await emit(store, run_id, "agent.completed", {"agentId":judge["originalAgentId"],"position":judge["position"],**final,"durationMs":duration,"usage":judge_usage,"fallbackUsed":judge_fallback})
     all_usage=[r["usage"] for r in results]+[judge_usage]
     input_tokens=sum(u["inputTokens"] for u in all_usage); output_tokens=sum(u["outputTokens"] for u in all_usage)
     total_duration=round((time.monotonic()-started)*1000)
@@ -172,11 +225,12 @@ async def execute_run(store, provider, run_id: str):
         await emit(store, run_id, "run.completed", {"progress":100,"finalVerdict":final,"usage":usage,"metrics":metrics})
 
 
-async def _fail(store, run: dict, message: str):
-    result = await store.update_one("analysis_runs", {"_id":run["id"],"status":"running"}, {"$set":{"status":"failed","completedAt":utcnow(),"error":{"code":"AI_RUN_FAILED","message":message}}})
+async def _fail(store, run: dict, message: str, code: str = "AI_RUN_FAILED", details: dict | None = None):
+    error = {"code":code,"message":message,"details":details or {}}
+    result = await store.update_one("analysis_runs", {"_id":run["id"],"status":"running"}, {"$set":{"status":"failed","completedAt":utcnow(),"error":error}})
     if result.matched_count:
         await refund(store, run["userId"], run["id"], run["reservedCredits"], "failed_run_refund")
-        await emit(store, run["id"], "run.failed", {"code":"AI_RUN_FAILED","message":message})
+        await emit(store, run["id"], "run.failed", error)
 
 
 async def full_decision(store, decision: dict):

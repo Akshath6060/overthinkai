@@ -188,9 +188,9 @@ Deploy it on Render using [render.yaml](backend/render.yaml), or use the same co
 | `MONGODB_DATABASE` | Yes | Backend | Database name | `overthinker` |
 | `AI_PROVIDER` | Yes | Backend | Active provider | `gemini` or `openai` |
 | `GEMINI_API_KEY` | Conditional | Backend | Required for Gemini | Secret value |
-| `GEMINI_MODEL` | Gemini | Backend | Primary analyst model | `gemini-2.5-flash-lite` |
-| `GEMINI_JUDGE_MODEL` | Gemini | Backend | Primary verdict model | `gemini-3.7-flash` |
-| `GEMINI_FALLBACK_MODELS` | Recommended | Backend | Ordered capacity/retirement fallback pool | `gemini-2.5-flash-lite,gemini-2.5-flash,gemini-3.7-flash,gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash` |
+| `GEMINI_MODEL` | Gemini | Backend | Primary analyst model | `gemini-3.5-flash-lite` |
+| `GEMINI_JUDGE_MODEL` | Gemini | Backend | Primary verdict model | `gemini-3.1-flash-lite` |
+| `GEMINI_FALLBACK_MODELS` | Recommended | Backend | Ordered capacity/retirement fallback pool | `gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash` |
 | `GEMINI_MAX_CONCURRENCY` | Recommended | Backend | Maximum simultaneous Gemini requests per API key | `1` |
 | `OPENAI_API_KEY` | Conditional | Backend | Required for OpenAI | Secret value |
 | `SESSION_SECRET` | Production | Backend | At least 32 random characters | Random secret |

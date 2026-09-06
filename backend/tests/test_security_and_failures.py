@@ -30,6 +30,15 @@ class SlowProvider(AIProvider):
         return JudgeOutput(headline="DONE",explanation="Visible",confidence=70,approveCount=1,disapproveCount=0,dissentingAgentIds=[]),{"inputTokens":1,"outputTokens":1,"estimatedCostMinor":0,"currency":"INR"}
 
 
+class FailingJudgeProvider(SlowProvider):
+    async def analyze(self,*args,**kwargs):
+        from app.schemas.ai import AnalystOutput
+        return AnalystOutput(analysis="Visible summary",verdict="PROCEED",confidence=70),{"inputTokens":1,"outputTokens":1,"estimatedCostMinor":0,"currency":"INR"}
+
+    async def judge(self,*args,**kwargs):
+        raise RuntimeError("judge unavailable")
+
+
 def configured(provider):
     settings=Settings(app_env="test",mongodb_uri="memory://",ai_provider="mock",session_secret="test-session-secret-that-is-long-enough")
     return create_app(settings,MemoryStore(),provider)
@@ -55,6 +64,18 @@ def test_provider_failure_refunds_and_redacts():
         assert run.json()["status"]=="failed"
         assert client.get("/api/v1/me").json()["plan"]["creditsUsed"]==0
         assert "SECRET_VALUE" not in run.text
+
+
+def test_judge_failure_uses_completed_analyses_for_fallback_verdict():
+    with TestClient(configured(FailingJudgeProvider())) as client:
+        client.post("/api/v1/auth/guest")
+        made=create_decision(client,minimal()).json()
+        run=wait_complete(client,made["runId"]).json()
+        assert run["status"]=="completed"
+        assert run["partialFailure"] is True
+        assert run["finalVerdict"]["headline"].startswith("PROCEED WITH")
+        judge=next(agent for agent in run["agents"] if agent["role"]=="judge")
+        assert judge["fallbackUsed"] is True
 
 
 def test_cancelled_run_cannot_complete():
