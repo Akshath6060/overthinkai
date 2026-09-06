@@ -28,7 +28,7 @@ Health and API documentation are at `/health`, `/api/v1/health`, `/docs`, `/redo
 
 ## Configuration
 
-Required production variables: `APP_ENV`, `MONGODB_URI`, `MONGODB_DATABASE`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_JUDGE_MODEL`, `SESSION_SECRET`, `SESSION_EXPIRE_DAYS`, `FRONTEND_URL`, `ALLOWED_ORIGINS`, `DEFAULT_CREDIT_ALLOWANCE`, `AI_PROVIDER`, `LOG_LEVEL`, `COOKIE_SECURE`, `COOKIE_SAMESITE`, and `DOCS_ENABLED`. The `OPENAI_*` variables remain available when `AI_PROVIDER=openai`.
+Required production variables: `APP_ENV`, `MONGODB_URI`, `MONGODB_DATABASE`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_JUDGE_MODEL`, `GEMINI_FALLBACK_MODEL`, `SESSION_SECRET`, `SESSION_EXPIRE_DAYS`, `FRONTEND_URL`, `ALLOWED_ORIGINS`, `DEFAULT_CREDIT_ALLOWANCE`, `AI_PROVIDER`, `LOG_LEVEL`, `COOKIE_SECURE`, `COOKIE_SAMESITE`, and `DOCS_ENABLED`. The `OPENAI_*` variables remain available when `AI_PROVIDER=openai`. Gemini requests automatically fail over to `GEMINI_FALLBACK_MODEL` after retryable capacity, rate-limit, or retired-model responses.
 
 For Vercel → Render, set `COOKIE_SECURE=true` and `COOKIE_SAMESITE=none`. The API validates production mutation origins against the configured CORS allowlist. Cookies are HttpOnly and never returned in JSON. A same-site custom API domain is preferable when available.
 

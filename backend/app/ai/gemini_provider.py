@@ -6,6 +6,7 @@ import httpx
 from pydantic import BaseModel
 
 from app.core.errors import AppError
+from app.core.logging import log_event
 from app.schemas.ai import AnalystOutput, JudgeOutput
 from .provider import AIProvider
 
@@ -34,14 +35,14 @@ def _response_schema(schema: type[BaseModel]) -> dict:
 class GeminiProvider(AIProvider):
     """Gemini Generate Content implementation with validated structured outputs."""
 
-    def __init__(self, api_key: str, model: str, judge_model: str, client: httpx.AsyncClient | None = None):
+    def __init__(self, api_key: str, model: str, judge_model: str, client: httpx.AsyncClient | None = None, fallback_model: str = ""):
         self.api_key = api_key
         self.model = model
         self.judge_model = judge_model
+        self.fallback_model = fallback_model.strip()
         self.client = client or httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0))
 
     async def _structured(self, model: str, system: str, payload: dict, schema: type[OutputT]) -> tuple[OutputT, dict]:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": json.dumps(payload, ensure_ascii=False)}]}],
@@ -51,29 +52,45 @@ class GeminiProvider(AIProvider):
                 "temperature": 0.8,
             },
         }
-        for attempt in range(3):
-            try:
-                response = await self.client.post(url, headers={"x-goog-api-key": self.api_key}, json=body)
-                if response.status_code in {429, 500, 502, 503, 504} and attempt < 2:
-                    await asyncio.sleep(0.25 * (2 ** attempt))
-                    continue
-                response.raise_for_status()
-                raw = response.json()
-                text = raw["candidates"][0]["content"]["parts"][0]["text"]
-                result = schema.model_validate_json(text)
-                usage = raw.get("usageMetadata", {})
-                return result, {
-                    "inputTokens": int(usage.get("promptTokenCount", 0)),
-                    "outputTokens": int(usage.get("candidatesTokenCount", 0)),
-                    "estimatedCostMinor": 0,
-                    "currency": "INR",
-                }
-            except (httpx.HTTPError, KeyError, IndexError, ValueError) as exc:
-                if attempt < 2 and isinstance(exc, (httpx.TimeoutException, httpx.NetworkError)):
-                    await asyncio.sleep(0.25 * (2 ** attempt))
-                    continue
-                raise AppError(502, "AI_PROVIDER_ERROR", "The Gemini council is temporarily unavailable.") from exc
-        raise AppError(503, "AI_PROVIDER_UNAVAILABLE", "The Gemini council is temporarily unavailable.")
+        models = [model]
+        if self.fallback_model and self.fallback_model != model:
+            models.append(self.fallback_model)
+        retryable_statuses = {404, 429, 500, 502, 503, 504}
+        last_status = None
+        for model_index, selected_model in enumerate(models):
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{selected_model}:generateContent"
+            for attempt in range(3):
+                try:
+                    response = await self.client.post(url, headers={"x-goog-api-key": self.api_key}, json=body)
+                    last_status = response.status_code
+                    if response.status_code in retryable_statuses:
+                        if attempt < 2:
+                            await asyncio.sleep(0.25 * (2 ** attempt))
+                            continue
+                        break
+                    response.raise_for_status()
+                    raw = response.json()
+                    text = raw["candidates"][0]["content"]["parts"][0]["text"]
+                    result = schema.model_validate_json(text)
+                    usage = raw.get("usageMetadata", {})
+                    return result, {
+                        "inputTokens": int(usage.get("promptTokenCount", 0)),
+                        "outputTokens": int(usage.get("candidatesTokenCount", 0)),
+                        "estimatedCostMinor": 0,
+                        "currency": "INR",
+                    }
+                except (httpx.TimeoutException, httpx.NetworkError):
+                    if attempt < 2:
+                        await asyncio.sleep(0.25 * (2 ** attempt))
+                        continue
+                    break
+                except httpx.HTTPStatusError as exc:
+                    raise AppError(502, "AI_PROVIDER_ERROR", "The Gemini council is temporarily unavailable.", {"providerStatus": exc.response.status_code}) from exc
+                except (KeyError, IndexError, ValueError) as exc:
+                    raise AppError(502, "AI_PROVIDER_ERROR", "The Gemini council is temporarily unavailable.") from exc
+            if model_index + 1 < len(models):
+                log_event("ai.provider_fallback", provider="gemini", primaryModel=model, fallbackModel=models[model_index + 1], providerStatus=last_status)
+        raise AppError(503, "AI_PROVIDER_UNAVAILABLE", "The Gemini council is temporarily unavailable.", {"providerStatus": last_status})
 
     async def analyze(self, question, agent, severity, humor_level):
         budgets = {"NORMAL": "under 120 words", "SEVERE": "under 220 words", "EXISTENTIAL": "under 350 words"}
