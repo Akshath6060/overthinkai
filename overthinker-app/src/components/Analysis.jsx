@@ -128,15 +128,16 @@ export default function Analysis(v) {
                   style={`padding:13px 20px;border-radius:14px;border:3px solid #2B2336;background:${v.accent};color:#FFF;font-family:Bangers,cursive;font-size:20px;letter-spacing:.9px;cursor:pointer;box-shadow:5px 5px 0 #2B2336;transition:transform .12s,box-shadow .12s`}
                   hover="transform:translate(-2px,-3px);box-shadow:7px 8px 0 #2B2336"
                   active="transform:translate(2px,2px);box-shadow:1px 1px 0 #2B2336">OVERTHINK ANOTHER ONE</Sx>
-                <Sx as="button"
+                <Sx as="button" type="button" onClick={v.shareResult}
                   style="padding:13px 20px;border-radius:14px;border:3px solid #2B2336;background:#4CC9F0;color:#1A1720;font-family:Bangers,cursive;font-size:20px;letter-spacing:.9px;cursor:pointer;box-shadow:5px 5px 0 #2B2336;transition:transform .12s,box-shadow .12s"
                   hover="transform:translate(-2px,-3px);box-shadow:7px 8px 0 #2B2336"
                   active="transform:translate(2px,2px);box-shadow:1px 1px 0 #2B2336">SHARE THE SHAME</Sx>
-                <Sx as="button"
+                <Sx as="button" type="button" onClick={v.downloadResult}
                   style="padding:13px 20px;border-radius:14px;border:3px solid #2B2336;background:#FFF;color:#1A1720;font-family:Bangers,cursive;font-size:20px;letter-spacing:.9px;cursor:pointer;box-shadow:5px 5px 0 #2B2336;transition:transform .12s,box-shadow .12s"
                   hover="transform:translate(-2px,-3px);box-shadow:7px 8px 0 #2B2336"
                   active="transform:translate(2px,2px);box-shadow:1px 1px 0 #2B2336">SAVE FOR THERAPY</Sx>
               </div>
+              {v.actionStatus && <div role="status" aria-live="polite" style={css('margin-top:14px;font-size:12px;font-weight:700;color:#3A3244')}>{v.actionStatus}</div>}
             </div>
 
             <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px')}>
@@ -154,7 +155,7 @@ export default function Analysis(v) {
 
       <aside data-rightpanel="1" style={css('width:340px;flex:none;position:sticky;top:82px;display:flex;flex-direction:column;gap:14px')}>
         <div style={css('background:#2B2336;border:3px solid #2B2336;border-radius:18px;overflow:hidden;box-shadow:5px 5px 0 #FFD84D')}>
-          <button onClick={v.toggleLog} style={css('width:100%;display:flex;align-items:center;gap:9px;padding:13px 15px;background:#2B2336;border:0;cursor:pointer;text-align:left')}>
+          <button type="button" aria-expanded={v.logOpen} onClick={v.toggleLog} style={css('width:100%;display:flex;align-items:center;gap:9px;padding:13px 15px;background:#2B2336;border:0;cursor:pointer;text-align:left')}>
             <span style={css('width:8px;height:8px;border-radius:50%;background:#B7F34A;animation:ot-blink 1.4s ease-in-out infinite')}></span>
             <span style={css('flex:1;font-family:Bangers,cursive;font-size:16px;letter-spacing:.7px;color:#FFF8E7')}>GROUP CHAT (AGENT ACTIVITY)</span>
             <span style={css('font-size:12px;color:#FFF8E7')}>{v.logChevron}</span>

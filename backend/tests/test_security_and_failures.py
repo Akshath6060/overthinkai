@@ -59,6 +59,16 @@ def test_cancelled_run_cannot_complete():
         assert client.get("/api/v1/me").json()["plan"]["creditsUsed"]==0
 
 
+def test_rate_limit_returns_retry_after():
+    with TestClient(configured(SlowProvider())) as client:
+        for _ in range(10):
+            assert client.post("/api/v1/auth/guest").status_code == 200
+        limited = client.post("/api/v1/auth/guest")
+        assert limited.status_code == 429
+        assert int(limited.headers["retry-after"]) >= 1
+        assert limited.json()["error"]["code"] == "RATE_LIMITED"
+
+
 def test_user_isolation(authed,decision_body):
     custom=authed.post("/api/v1/agents",json={"name":"Private","instructions":"My private instruction"}).json()
     made=create_decision(authed,decision_body).json(); wait_complete(authed,made["runId"])

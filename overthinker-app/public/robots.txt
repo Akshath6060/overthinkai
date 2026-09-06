@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /dashboard
 Disallow: /decisions
+Disallow: /decision/
 Disallow: /history
 Disallow: /analytics
 Disallow: /settings

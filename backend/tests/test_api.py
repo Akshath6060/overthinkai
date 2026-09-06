@@ -5,6 +5,9 @@ from conftest import create_decision, wait_complete
 
 def test_health_and_auth(client):
     assert client.get("/health").json()=={"status":"ok"}
+    assert client.get("/health/ready").json()=={"status":"ready"}
+    missing=client.get("/api/v1/definitely-not-real")
+    assert missing.status_code==404 and missing.json()["error"]["code"]=="HTTP_404"
     assert client.get("/api/v1/me").status_code==401
     login=client.post("/api/v1/auth/guest")
     assert login.status_code==200 and login.json()["user"]["guest"] is True

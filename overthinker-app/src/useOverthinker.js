@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   agentDefs, loadingMsgs, loginSteps, loginMsgs,
-  quizQuestionDefs, navDefs, pageTitles, catColors, levelDefs, levelHints,
+  quizQuestionDefs, navDefs, pageTitles, catColors, levelDefs,
   exampleLabels, exColors, lvlBg, lvlEmoji, humorNotes, toggleDefs
 } from './data.js';
 import { API_URL, AUTH_EXPIRED_EVENT, ApiError, api } from './api.js';
@@ -68,10 +68,13 @@ export function useOverthinker(props = {}) {
   const [analyticsError, setAnalyticsError] = useState('');
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState('');
+  const [actionStatus, setActionStatus] = useState('');
   const [serverAgents, setServerAgents] = useState([]);
   const [agentPresets, setAgentPresets] = useState([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentsError, setAgentsError] = useState('');
+  const [decisionLoading, setDecisionLoading] = useState(false);
+  const [decisionErrorStatus, setDecisionErrorStatus] = useState(0);
 
   const [order, setOrder] = useState([0, 1, 2, 3, 4, 5]);
   const [disabled, setDisabled] = useState({});
@@ -186,6 +189,30 @@ export function useOverthinker(props = {}) {
     }
   }, []);
 
+  const loadDecision = useCallback(async () => {
+    if (!props.decisionId) return;
+    setDecisionLoading(true);
+    setDecisionErrorStatus(0);
+    try {
+      const detail = await api(`/decisions/${encodeURIComponent(props.decisionId)}`);
+      setQ(detail.question || '');
+      setCat(detail.category || 'Other');
+      setLevelState(detail.severity || 'SEVERE');
+      setRunId(detail.run?.id || null);
+      setRunAgents(detail.agents || []);
+      setRunProgress(detail.run?.progress || 100);
+      setFinalVerdict(detail.finalVerdict || null);
+      setRunUsage(detail.usage || null);
+      setRunMetrics(detail.metrics || null);
+      setOverall(detail.finalVerdict?.confidence || 0);
+      setPhase(detail.run?.status === 'completed' ? 'done' : 'running');
+    } catch (error) {
+      setDecisionErrorStatus(error.status === 403 ? 403 : error.status === 404 ? 404 : 503);
+    } finally {
+      setDecisionLoading(false);
+    }
+  }, [props.decisionId]);
+
   useEffect(() => {
     if (authed && !serverAgents.length) loadAgents();
   }, [authed, loadAgents, serverAgents.length]);
@@ -194,7 +221,8 @@ export function useOverthinker(props = {}) {
     if (!authed) return;
     if (page === 'history') loadHistory();
     if (page === 'analytics') loadAnalytics();
-  }, [authed, loadAnalytics, loadHistory, page]);
+    if (page === 'decision') loadDecision();
+  }, [authed, loadAnalytics, loadDecision, loadHistory, page]);
 
   const level = levelState || props.defaultLevel || 'SEVERE';
   const humor = humorState || props.humorLevel || 'Dry';
@@ -217,6 +245,7 @@ export function useOverthinker(props = {}) {
 
   const startLogin = useCallback(() => {
     clearAll();
+    setApiError('');
     setLoginPhase('running');
     setLoginStep(0);
     setLoginMsgIdx(0);
@@ -261,8 +290,14 @@ export function useOverthinker(props = {}) {
     setRunMetrics(null);
     setRunProgress(0);
     const selectedIndexes = order.filter(index => !disabled[index]);
-    const sourceAgents = serverAgents.length ? serverAgents.map((agent, index) => normalizeAgent(agent, agentDefs[defaultAgentIds.indexOf(agent.id)] || {})) : agentDefs.map((agent, index) => ({ ...agent, id: defaultAgentIds[index] }));
+    const sourceAgents = serverAgents.length ? serverAgents.map(agent => normalizeAgent(agent, agentDefs[defaultAgentIds.indexOf(agent.id)] || {})) : agentDefs.map((agent, index) => ({ ...agent, id: defaultAgentIds[index], role: index === agentDefs.length - 1 ? 'judge' : 'analyst' }));
     const selectedAgentIds = selectedIndexes.map(index => sourceAgents[index].id);
+    const selectedAgents = selectedIndexes.map(index => sourceAgents[index]);
+    if (selectedAgents.filter(agent => agent.role === 'judge').length !== 1 || !selectedAgents.some(agent => agent.role === 'analyst')) {
+      setApiError('The council needs at least one analyst and exactly one final judge.');
+      setPhase('input');
+      return;
+    }
     const initialAgents = selectedIndexes.map((index, position) => ({
       ...sourceAgents[index], position, status: 'queued'
     }));
@@ -314,6 +349,7 @@ export function useOverthinker(props = {}) {
         setFinalVerdict(event.data.finalVerdict);
         setOverall(event.data.finalVerdict.confidence);
         setPhase('done');
+        if (toggles.autosave) setAccount(current => current ? { ...current, historyCount: (current.historyCount || 0) + 1 } : current);
         stream.close();
       });
       const fail = event => {
@@ -350,7 +386,10 @@ export function useOverthinker(props = {}) {
     setRunUsage(null);
     setRunMetrics(null);
     setApiError('');
-  }, [clearAll]);
+    setActionStatus('');
+    setPage('new');
+    props.navigate?.('new');
+  }, [clearAll, props.navigate]);
 
   const go = id => () => {
     setPage(id);
@@ -361,7 +400,7 @@ export function useOverthinker(props = {}) {
 
   const nav = navDefs.map(n => {
     const on = page === n.id;
-    return { ...n, go: go(n.id), bg: on ? n.chip : '#FFF', bd: on ? DARK : 'transparent',
+    return { ...n, badge: n.id === 'history' ? (account?.historyCount || false) : n.badge, go: go(n.id), bg: on ? n.chip : '#FFF', bd: on ? DARK : 'transparent',
       sh: on ? SHADOW : 'none', mbg: on ? n.chip : '#FFF' };
   });
 
@@ -387,7 +426,7 @@ export function useOverthinker(props = {}) {
 
   const uiAgentDefs = serverAgents.length
     ? serverAgents.map(agent => normalizeAgent(agent, agentDefs[defaultAgentIds.indexOf(agent.id)] || {}))
-    : agentDefs.map((agent, index) => ({ ...agent, id: defaultAgentIds[index], enabled: !disabled[index] }));
+    : agentDefs.map((agent, index) => ({ ...agent, id: defaultAgentIds[index], role: index === agentDefs.length - 1 ? 'judge' : 'analyst', enabled: !disabled[index] }));
   const activeAgentDefs = runAgents.length ? runAgents : uiAgentDefs.map(agent => ({ ...agent, status: 'queued' }));
   const agents = activeAgentDefs.map((d, i) => {
     const done = d.status === 'completed';
@@ -446,6 +485,26 @@ export function useOverthinker(props = {}) {
       setSettingsSaving(false);
     }
   }, []);
+
+  const shareResult = useCallback(async () => {
+    const text = `${question}\n\n${finalVerdict?.headline || ''}\n${finalVerdict?.explanation || ''}`.trim();
+    try {
+      if (navigator.share) await navigator.share({ title: 'My Overthinker AI verdict', text });
+      else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); setActionStatus('Verdict copied to your clipboard.'); }
+      else setActionStatus('Sharing is not supported in this browser. Save the verdict instead.');
+    } catch (error) {
+      if (error.name !== 'AbortError') setActionStatus('The verdict declined to be shared. Please try again.');
+    }
+  }, [finalVerdict, question]);
+
+  const downloadResult = useCallback(() => {
+    const content = `OVERTHINKER AI VERDICT\n\nQuestion: ${question}\nVerdict: ${finalVerdict?.headline || ''}\nConfidence: ${finalVerdict?.confidence || 0}%\n\n${finalVerdict?.explanation || ''}`;
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = `overthinker-verdict-${runId || 'result'}.txt`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    setActionStatus('Verdict saved for future overanalysis.');
+  }, [finalVerdict, question, runId]);
 
   const saveAgentOrder = nextOrder => api('/agents/order', { method: 'PUT', body: JSON.stringify({ agentIds: nextOrder.map(index => uiAgentDefs[index].id) }) }).catch(error => setAgentsError(error.message));
   const labAgents = order.map((idx, pos) => {
@@ -514,15 +573,16 @@ export function useOverthinker(props = {}) {
     cancelLogout: () => setLogoutOpen(false),
     doLogout: logout,
     accent,
-    nav, pageTitle: pageTitles[page],
+    nav, pageTitle: pageTitles[page] || 'VERDICT',
     pageMeta: page === 'new' ? (done ? `verdict delivered · ${runAgents.length} experts bothered` : running ? 'overthinking in progress' : 'idle · awaiting something trivial')
       : page === 'history' ? `${account?.historyCount ?? historyItems.length} regrets on file`
       : page === 'analytics' ? 'last 7 days of hesitation'
-      : page === 'lab' ? `${uiAgentDefs.length} experts · ${enabledCount} on duty` : 'nothing here will help',
+      : page === 'lab' ? `${uiAgentDefs.length} experts · ${enabledCount} on duty`
+      : page === 'decision' ? 'a previously overthought verdict' : 'nothing here will help',
     isNew: page === 'new', isHistory: page === 'history', isAnalytics: page === 'analytics',
     isLab: page === 'lab', isSettings: page === 'settings',
     isInput: page === 'new' && phase === 'input',
-    inAnalysis: page === 'new' && phase !== 'input',
+    inAnalysis: (page === 'new' && phase !== 'input') || page === 'decision',
     isRunning: running, isDone: done,
     q, onQ: e => setQ(e.target.value),
     cats, levels, levelHint: `${enabledCount} experts · ${{ NORMAL: 'lower', SEVERE: 'standard', EXISTENTIAL: 'larger' }[level]} answer budget`, examples, begin, reset, apiError,
@@ -563,6 +623,7 @@ export function useOverthinker(props = {}) {
       bg: hFilter === f ? '#FFD84D' : 'transparent', bd: hFilter === f ? DARK : 'transparent' })),
     search, onSearch: e => setSearch(e.target.value),
     rows, rowCount: rows.length, noRows: rows.length === 0, historyLoading, historyError, retryHistory: loadHistory,
+    openDecision: decisionId => props.navigateDecision?.(decisionId), decisionLoading, decisionErrorStatus, retryDecision: loadDecision,
     analyticsData, analyticsLoading, analyticsError, retryAnalytics: loadAnalytics,
     agreeRows: uiAgentDefs.map(d => ({ emoji: d.emoji, color: d.color, name: d.name, pct: d.drama + '%',
       fill: d.drama > 80 ? '#FF4D4D' : d.drama > 50 ? '#FF8C42' : '#B7F34A' })),
@@ -579,7 +640,7 @@ export function useOverthinker(props = {}) {
       { name: 'Single Model, One Opinion', note: 'Answers instantly. Defeats the entire purpose.', latency: '~0.8s', inner: 'transparent' },
       { name: 'Bring Your Own Key', note: 'Route the chaos through your own provider.', latency: 'varies', inner: 'transparent' }
     ],
-    toggleRows, settingsSaving, settingsError, persistSetting,
+    toggleRows, settingsSaving, settingsError, persistSetting, actionStatus, shareResult, downloadResult,
     exportData: () => { window.location.assign(`${API_URL}/api/v1/me/export`); },
     deleteHistory: async () => {
       setSettingsSaving(true); setSettingsError('');

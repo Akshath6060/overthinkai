@@ -39,7 +39,8 @@ function LoadingScreen() {
 
 export default function App(props) {
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
-  const routePage = ROUTES[path];
+  const decisionMatch = path.match(/^\/decision\/([^/]+)$/);
+  const routePage = ROUTES[path] || (decisionMatch ? 'decision' : undefined);
   useEffect(() => {
     const onPopState = () => setPath(normalizePath(window.location.pathname));
     window.addEventListener('popstate', onPopState);
@@ -50,7 +51,12 @@ export default function App(props) {
     window.history.pushState({}, '', nextPath);
     setPath(nextPath);
   };
-  const v = useOverthinker({ ...props, initialPage: routePage || 'new', routePage, navigate });
+  const navigateDecision = decisionId => {
+    const nextPath = `/decision/${encodeURIComponent(decisionId)}`;
+    window.history.pushState({}, '', nextPath);
+    setPath(nextPath);
+  };
+  const v = useOverthinker({ ...props, initialPage: routePage || 'new', routePage, decisionId: decisionMatch?.[1], navigate, navigateDecision });
 
   if (!routePage) return <ErrorPage status={404} onHome={() => navigate('new')} showBack />;
 
@@ -59,6 +65,9 @@ export default function App(props) {
   if (v.serviceUnavailable) return <ErrorPage status={503} onRetry={v.restoreSession} onHome={() => navigate('new')} />;
 
   if (v.needsAuth) return <LoginScreen {...v} />;
+
+  if (v.decisionLoading) return <LoadingScreen />;
+  if (v.decisionErrorStatus) return <ErrorPage status={v.decisionErrorStatus} onRetry={v.retryDecision} onHome={() => navigate('new')} showBack />;
 
   return (
     <div data-shell="1" style={css('display:flex;min-height:100vh;background:#FFF8E7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#1A1720')}>

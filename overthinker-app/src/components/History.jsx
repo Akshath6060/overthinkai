@@ -36,8 +36,8 @@ export default function History(v) {
         </div>
         {v.historyLoading && <div role="status" style={css('padding:50px 24px;text-align:center;font-weight:700')}>🌀 Retrieving your previous overthinking…</div>}
         {!v.historyLoading && v.rows.map(r => (
-          <Sx key={r.decisionId}
-            style={GRID + ';padding:14px 18px;border-bottom:2px solid #EFE6D4;align-items:center;cursor:pointer;transition:background .12s'}
+          <Sx key={r.decisionId} as="button" type="button" onClick={() => v.openDecision(r.decisionId)}
+            style={GRID + ';width:100%;padding:14px 18px;border:0;border-bottom:2px solid #EFE6D4;background:#FFF;text-align:left;color:#1A1720;align-items:center;cursor:pointer;transition:background .12s'}
             hover="background:#FFF8E7">
             <span style={css("font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;letter-spacing:-.2px;min-width:0")}>{r.q}</span>
             <span style={css('font-size:13px;color:#3A3244;min-width:0;font-weight:600')}>{r.verdict}</span>

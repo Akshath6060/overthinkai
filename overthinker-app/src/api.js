@@ -47,8 +47,9 @@ export async function api(path, init = {}) {
     const payload = contentType.includes('application/json') ? await response.json().catch(() => null) : null;
     if (!response.ok) {
       const retryAfter = response.headers.get('retry-after');
-      const safeMessage = payload?.error?.message || messages[response.status]
+      let safeMessage = messages[response.status] || payload?.error?.message
         || (response.status >= 500 ? 'Our overthinking engine seems to be taking a break.' : `Request failed (${response.status}).`);
+      if (response.status === 429 && retryAfter) safeMessage += ` Try again in ${retryAfter} seconds.`;
       if (response.status === 401 && !path.startsWith('/auth/')) emitAuthExpired();
       throw new ApiError({
         message: safeMessage,
